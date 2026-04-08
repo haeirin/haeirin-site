@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>장바구니 - My Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .cart-layout {
+      display:grid; grid-template-columns:1fr 360px; gap:20px; align-items:start;
+    }
+    @media(max-width:900px){ .cart-layout{ grid-template-columns:1fr; } }
+
+    .cart-card { background:white; border-radius:var(--radius); border:1px solid var(--border); overflow:hidden; }
+    .cart-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 20px; background:var(--bg); border-bottom:1px solid var(--border);
+    }
+    .cart-head-left { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:600; }
+    .cart-head-left input[type=checkbox] { width:17px; height:17px; accent-color:var(--primary); cursor:pointer; }
+
+    .c-item {
+      display:flex; gap:14px; padding:18px 20px;
+      border-bottom:1px solid var(--border); align-items:flex-start;
+      transition:var(--transition);
+    }
+    .c-item:last-child { border-bottom:none; }
+    .c-item:hover { background:#fafbff; }
+    .c-item-check { width:17px; height:17px; accent-color:var(--primary); cursor:pointer; flex-shrink:0; margin-top:4px; }
+    .c-item-img {
+      width:82px; height:82px; border-radius:8px; background:#f1f5f9; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; font-size:28px;
+      overflow:hidden; border:1px solid var(--border);
+    }
+    .c-item-img img { width:100%; height:100%; object-fit:cover; }
+    .c-item-info { flex:1; }
+    .c-item-name { font-weight:700; font-size:14px; margin-bottom:5px; }
+    .c-item-name a { color:var(--text); } .c-item-name a:hover { color:var(--primary); }
+    .c-item-opts { font-size:12px; color:var(--text-muted); margin-bottom:8px; display:flex; gap:6px; flex-wrap:wrap; }
+    .c-item-opt { background:var(--bg); padding:2px 9px; border-radius:100px; border:1px solid var(--border); }
+    .c-item-bottom { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .c-item-price { font-size:16px; font-weight:800; color:var(--primary); }
+    .c-item-unit { font-size:12px; color:var(--text-muted); }
+    .c-del-btn { background:none; border:none; cursor:pointer; font-size:18px; color:var(--text-light); padding:2px 4px; transition:var(--transition); flex-shrink:0; }
+    .c-del-btn:hover { color:var(--danger); }
+
+    /* Summary */
+    .sum-card { background:white; border-radius:var(--radius); border:1px solid var(--border); position:sticky; top:80px; }
+    .sum-head { padding:16px 20px; border-bottom:1px solid var(--border); font-weight:800; font-size:16px; }
+    .sum-body { padding:18px 20px; }
+    .sum-row { display:flex; justify-content:space-between; padding:7px 0; font-size:14px; }
+    .sum-row.total { border-top:2px solid var(--border); margin-top:8px; padding-top:14px; font-size:18px; font-weight:800; color:var(--primary); }
+    .free-bar { background:var(--primary-light); border-radius:8px; padding:10px 12px; margin:12px 0; font-size:13px; }
+    .free-bar-progress { background:#c7d2fe; border-radius:100px; height:5px; margin-top:7px; overflow:hidden; }
+    .free-bar-fill { height:100%; background:var(--primary); border-radius:100px; transition:width 0.5s ease; }
+  </style>
+</head>
+<body>
+<header class="header" id="mainHeader"></header>
+
+<main class="page-content">
+  <h1 style="font-size:26px;font-weight:800;margin-bottom:6px;">🛒 장바구니</h1>
+  <p style="color:var(--text-muted);font-size:14px;margin-bottom:24px;">선택한 상품을 확인하고 주문해주세요</p>
+  <div class="cart-layout" id="cartLayout">
+    <div style="text-align:center;padding:80px;color:var(--text-muted);">
+      <div class="spinner" style="margin:0 auto 20px;"></div><p>불러오는 중...</p>
+    </div>
+  </div>
+</main>
+
+<footer class="footer" style="margin-top:48px;">
+  <div class="footer-bottom" style="text-align:center;">
+    <a href="index.html" style="color:#94a3b8;">← 쇼핑 계속하기</a>
+  </div>
+</footer>
+<div class="toast-container"></div>
+<script src="js/utils.js"></script>
+<script>
+  let items = [];
+  let selected = new Set();
+  let shippingFee = 3000, freeThreshold = 50000;
+
+  async function init() {
+    await renderHeader('cart');
+
+    // ✅ 로그인 필수 체크 - 비로그인 시 즉시 차단
+    if (!Auth.getUser()) {
+      document.getElementById('cartLayout').innerHTML = `
+        <div style="grid-column:1/-1;">
+          <div class="empty-state">
+            <div class="icon">🔒</div>
+            <h3>로그인이 필요합니다</h3>
+            <p style="color:var(--text-muted);margin-bottom:24px;">
+              장바구니를 이용하려면 로그인해 주세요.
+            </p>
+            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+              <a href="login.html?from=cart.html" class="btn btn-primary btn-lg">🔑 로그인</a>
+              <a href="register.html" class="btn btn-outline btn-lg">✏️ 회원가입</a>
+            </div>
+          </div>
+        </div>`;
+      return;
+    }
+
+    try {
+      const s = await Settings.getAll();
+      shippingFee = parseInt(s.shipping_fee_standard || 3000);
+      freeThreshold = parseInt(s.shipping_fee_free_threshold || 50000);
+    } catch {}
+    reload();
+  }
+
+  function reload() {
+    items = Cart.get();
+    if (items.length === 0) { renderEmpty(); return; }
+    selected = new Set(items.map(i => i.cart_key));
+    render();
+  }
+
+  function renderEmpty() {
+    document.getElementById('cartLayout').innerHTML = `
+      <div style="grid-column:1/-1;">
+        <div class="empty-state">
+          <div class="icon">🛒</div>
+          <h3>장바구니가 비어있습니다</h3>
+          <p>마음에 드는 상품을 담아보세요!</p>
+          <a href="index.html" class="btn btn-primary btn-lg" style="margin-top:24px;">쇼핑하러 가기</a>
+        </div>
+      </div>`;
+  }
+
+  function render() {
+    const layout = document.getElementById('cartLayout');
+    layout.innerHTML = `
+      <div class="cart-card">
+        <div class="cart-head">
+          <div class="cart-head-left">
+            <input type="checkbox" id="selectAll" ${selected.size===items.length?'checked':''}
+                   onchange="toggleAll(this.checked)">
+            <span>전체선택 (${items.length}개)</span>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="removeSelected()">선택 삭제</button>
+        </div>
+        <div id="itemList">
+          ${items.map(renderItem).join('')}
+        </div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-head">💰 주문 요약</div>
+        <div class="sum-body" id="sumBody">${renderSum()}</div>
+      </div>`;
+  }
+
+  function renderItem(item) {
+    const total = item.product_price * item.quantity;
+    const isSel = selected.has(item.cart_key);
+    const safeKey = item.cart_key.replace(/[^a-zA-Z0-9]/g,'_');
+    return `
+      <div class="c-item" id="ci_${safeKey}">
+        <input type="checkbox" class="c-item-check" ${isSel?'checked':''}
+               onchange="toggleOne('${item.cart_key}',this.checked)">
+        <div class="c-item-img">
+          ${item.product_thumbnail
+            ? `<img src="${item.product_thumbnail}" alt="" onerror="this.parentElement.innerHTML='🛍️'">`
+            : '🛍️'}
+        </div>
+        <div class="c-item-info">
+          <div class="c-item-name"><a href="product.html?id=${item.product_id}">${item.product_name}</a></div>
+          <div class="c-item-opts">
+            ${item.selected_color?`<span class="c-item-opt">🎨 ${item.selected_color}</span>`:''}
+            ${item.selected_size?`<span class="c-item-opt">📏 ${item.selected_size}</span>`:''}
+            ${item.selected_extra?`<span class="c-item-opt">➕ ${item.selected_extra}</span>`:''}
+          </div>
+          <div class="c-item-bottom">
+            <div class="qty-selector">
+              <button class="qty-btn" onclick="changeQty('${item.cart_key}',${item.quantity-1})">−</button>
+              <input type="number" class="qty-input" value="${item.quantity}" min="1"
+                     onchange="changeQty('${item.cart_key}',parseInt(this.value)||1)">
+              <button class="qty-btn" onclick="changeQty('${item.cart_key}',${item.quantity+1})">+</button>
+            </div>
+            <div>
+              <div class="c-item-unit">${formatPrice(item.product_price)} × ${item.quantity}</div>
+              <div class="c-item-price">${formatPrice(total)}</div>
+            </div>
+          </div>
+        </div>
+        <button class="c-del-btn" onclick="delItem('${item.cart_key}')" title="삭제">✕</button>
+      </div>`;
+  }
+
+  function renderSum() {
+    const selItems = items.filter(i => selected.has(i.cart_key));
+    const subtotal = selItems.reduce((s,i) => s + i.product_price * i.quantity, 0);
+    const ship = selItems.length === 0 ? 0 : (subtotal >= freeThreshold ? 0 : shippingFee);
+    const total = subtotal + ship;
+    const remain = freeThreshold - subtotal;
+    const pct = Math.min(100, (subtotal/freeThreshold)*100);
+
+    return `
+      ${remain > 0 && selItems.length > 0 ? `
+        <div class="free-bar">
+          <span style="color:var(--primary);font-weight:700;">🚚 ${formatPrice(remain)} 더 담으면 무료배송!</span>
+          <div class="free-bar-progress"><div class="free-bar-fill" style="width:${pct}%"></div></div>
+        </div>` :
+        selItems.length > 0 && ship === 0 ? `
+        <div style="background:#dcfce7;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--success);font-weight:700;">
+          🎉 무료배송 달성!
+        </div>` : ''}
+      <div class="sum-row"><span>선택 상품 (${selItems.length}개)</span><span>${formatPrice(subtotal)}</span></div>
+      <div class="sum-row"><span>배송비</span>
+        <span style="${ship===0&&selItems.length>0?'color:var(--success);font-weight:700;':''}">${ship===0&&selItems.length>0?'무료':formatPrice(ship)}</span>
+      </div>
+      <div class="sum-row total"><span>최종 금액</span><span>${formatPrice(total)}</span></div>
+      <button class="btn btn-primary btn-full btn-lg" style="margin-top:18px;" onclick="checkout()"
+              ${selItems.length===0?'disabled':''}>
+        주문하기 (${selItems.length}개)
+      </button>
+      <a href="index.html" class="btn btn-secondary btn-full" style="margin-top:10px;">쇼핑 계속하기</a>`;
+  }
+
+  function toggleAll(v) {
+    if (v) items.forEach(i => selected.add(i.cart_key));
+    else selected.clear();
+    rerender();
+  }
+
+  function toggleOne(key, v) {
+    if (v) selected.add(key); else selected.delete(key);
+    const sa = document.getElementById('selectAll');
+    if (sa) sa.checked = selected.size === items.length;
+    updateSum();
+  }
+
+  function changeQty(key, q) {
+    if (q < 1) { delItem(key); return; }
+    items = Cart.updateQty(key, q);
+    rerender();
+  }
+
+  function delItem(key) {
+    items = Cart.remove(key);
+    selected.delete(key);
+    if (items.length === 0) { renderEmpty(); return; }
+    rerender();
+    toast('삭제되었습니다.', 'default');
+  }
+
+  function removeSelected() {
+    if (selected.size === 0) { toast('선택된 상품이 없습니다.','warning'); return; }
+    selected.forEach(k => Cart.remove(k));
+    items = Cart.get();
+    selected.clear();
+    if (items.length === 0) { renderEmpty(); return; }
+    selected = new Set(items.map(i => i.cart_key));
+    rerender();
+    toast('선택 상품이 삭제되었습니다.','default');
+  }
+
+  function rerender() {
+    const list = document.getElementById('itemList');
+    if (list) list.innerHTML = items.map(renderItem).join('');
+    const hdr = document.querySelector('.cart-head-left');
+    if (hdr) hdr.innerHTML = `
+      <input type="checkbox" id="selectAll" ${selected.size===items.length?'checked':''}
+             onchange="toggleAll(this.checked)">
+      <span>전체선택 (${items.length}개)</span>`;
+    updateSum();
+  }
+
+  function updateSum() {
+    const sb = document.getElementById('sumBody');
+    if (sb) sb.innerHTML = renderSum();
+  }
+
+  function checkout() {
+    const selItems = items.filter(i => selected.has(i.cart_key));
+    if (selItems.length === 0) { toast('선택된 상품이 없습니다.','warning'); return; }
+    if (!Auth.getUser()) {
+      toast('로그인이 필요합니다.','warning');
+      setTimeout(() => { window.location.href='login.html?from=checkout.html'; },900);
+      return;
+    }
+    localStorage.setItem('shop_checkout_items', JSON.stringify(selItems));
+    window.location.href = 'checkout.html';
+  }
+
+  init();
+</script>
+</body>
+</html>

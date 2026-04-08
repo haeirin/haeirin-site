@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>주문 완료 - My Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .oc-wrap { max-width:680px; margin:0 auto; }
+    .oc-success {
+      background:linear-gradient(135deg,#dcfce7,#bbf7d0);
+      border-radius:var(--radius-lg); padding:48px 24px; text-align:center; margin-bottom:16px;
+    }
+    .oc-icon {
+      width:80px; height:80px; background:var(--success); border-radius:50%;
+      margin:0 auto 20px; display:flex; align-items:center; justify-content:center;
+      font-size:38px; color:white;
+      box-shadow:0 4px 20px rgba(22,163,74,0.3);
+      animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes popIn { from{transform:scale(0)} to{transform:scale(1)} }
+    .oc-title { font-size:26px; font-weight:800; color:var(--success); margin-bottom:6px; }
+    .oc-num { font-size:14px; color:#15803d; }
+
+    .oc-card { background:white; border-radius:var(--radius); border:1px solid var(--border); overflow:hidden; margin-bottom:14px; }
+    .oc-card-head { padding:14px 20px; background:var(--bg); border-bottom:1px solid var(--border); font-weight:700; font-size:15px; }
+    .oc-card-body { padding:18px 20px; }
+    .oc-row { display:flex; align-items:flex-start; gap:12px; padding:8px 0; border-bottom:1px solid var(--border); font-size:14px; }
+    .oc-row:last-child { border-bottom:none; }
+    .oc-lbl { color:var(--text-muted); min-width:90px; flex-shrink:0; font-size:13px; }
+    .oc-val { font-weight:600; flex:1; }
+
+    .order-item-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:14px; }
+    .order-item-row:last-child { border-bottom:none; }
+
+    .bank-guide { background:#fffbeb; border:2px solid #f59e0b; border-radius:var(--radius); padding:22px; margin-bottom:14px; }
+    .bank-guide-title { font-size:16px; font-weight:800; color:#92400e; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .bank-step { display:flex; gap:12px; padding:10px 0; border-bottom:1px dashed #fcd34d; }
+    .bank-step:last-child { border-bottom:none; }
+    .bank-step-num { width:24px; height:24px; background:#f59e0b; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; flex-shrink:0; }
+    .bank-step-txt { font-size:14px; line-height:1.7; }
+
+    .confirm-section {
+      background:white; border:2px solid var(--primary); border-radius:var(--radius);
+      padding:24px; text-align:center; margin-bottom:14px;
+    }
+    .confirm-btn {
+      background:var(--primary); color:white; border:none; width:100%;
+      padding:16px; border-radius:var(--radius); font-size:16px; font-weight:800;
+      cursor:pointer; transition:var(--transition); font-family:var(--font); margin-bottom:8px;
+    }
+    .confirm-btn:hover { background:var(--primary-dark); transform:translateY(-1px); box-shadow:0 4px 14px rgba(13,148,136,0.35); }
+    .confirm-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; box-shadow:none; }
+    .confirmed-box { padding:16px; }
+    .confirmed-box .check-big { font-size:48px; margin-bottom:12px; }
+    .confirmed-box h3 { font-size:18px; font-weight:800; color:var(--success); margin-bottom:6px; }
+    .confirmed-box p { font-size:14px; color:var(--text-muted); }
+  </style>
+</head>
+<body>
+<header class="header" id="mainHeader"></header>
+
+<main class="page-content">
+  <div class="oc-wrap" id="ocWrap">
+    <div style="text-align:center;padding:80px;color:var(--text-muted);">
+      <div class="spinner" style="margin:0 auto 20px;"></div><p>불러오는 중...</p>
+    </div>
+  </div>
+</main>
+
+<footer class="footer" style="margin-top:48px;">
+  <div class="footer-bottom" style="text-align:center;">
+    <a href="index.html" style="color:#94a3b8;">← 쇼핑 계속하기</a>
+  </div>
+</footer>
+<div class="toast-container"></div>
+<script src="js/utils.js"></script>
+<script>
+  let order = null, settings = {};
+
+  async function init() {
+    await renderHeader();
+    const p = new URLSearchParams(location.search);
+    const orderId = p.get('order');
+    if (!orderId) { location.href='index.html'; return; }
+
+    try {
+      settings = await Settings.getAll();
+      const res = await API.get('orders', { limit:500 });
+      order = (res.data||[]).find(o => o.id === orderId);
+      if (!order) throw new Error('not found');
+      render();
+    } catch {
+      document.getElementById('ocWrap').innerHTML =
+        `<div class="empty-state"><div class="icon">😕</div><h3>주문을 찾을 수 없습니다</h3>
+         <a href="index.html" class="btn btn-primary" style="margin-top:16px;">홈으로</a></div>`;
+    }
+  }
+
+  function render() {
+    const items = JSON.parse(order.items||'[]');
+    const alreadyConfirmed = ['transfer_confirmed','payment_confirmed','shipped','delivered'].includes(order.payment_status);
+
+    document.getElementById('ocWrap').innerHTML = `
+      <!-- Success Header -->
+      <div class="oc-success">
+        <div class="oc-icon">✓</div>
+        <div class="oc-title">주문이 완료되었습니다!</div>
+        <div class="oc-num">주문번호: <strong>${order.order_number}</strong></div>
+      </div>
+
+      <!-- 주문 기본 정보 -->
+      <div class="oc-card">
+        <div class="oc-card-head">📋 주문 정보</div>
+        <div class="oc-card-body">
+          <div class="oc-row"><span class="oc-lbl">주문번호</span><span class="oc-val" style="color:var(--primary);font-family:monospace;">${order.order_number}</span></div>
+          <div class="oc-row"><span class="oc-lbl">주문일시</span><span class="oc-val">${formatDate(order.created_at)}</span></div>
+          <div class="oc-row"><span class="oc-lbl">결제 방법</span><span class="oc-val">${order.payment_method==='bank_transfer'?'🏦 계좌이체':'💳 카드결제'}</span></div>
+          <div class="oc-row"><span class="oc-lbl">주문 상태</span><span class="oc-val">${statusBadge(order.payment_status)}</span></div>
+        </div>
+      </div>
+
+      <!-- 주문 상품 -->
+      <div class="oc-card">
+        <div class="oc-card-head">📦 주문 상품</div>
+        <div class="oc-card-body">
+          ${items.map(item => `
+            <div class="order-item-row">
+              <div>
+                <div style="font-weight:700;">${item.product_name}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+                  ${[item.selected_color&&`색상:${item.selected_color}`, item.selected_size&&`사이즈:${item.selected_size}`, `수량:${item.quantity}개`].filter(Boolean).join(' / ')}
+                </div>
+              </div>
+              <div style="font-weight:800;color:var(--primary);flex-shrink:0;">${formatPrice(item.subtotal)}</div>
+            </div>`).join('')}
+          <div style="margin-top:12px;padding-top:12px;border-top:2px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:14px;">
+              <span>상품금액</span><span>${formatPrice(order.total_price)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:14px;">
+              <span>배송비</span>
+              <span style="${order.shipping_fee==0?'color:var(--success);font-weight:700;':''}">
+                ${order.shipping_fee==0?'무료':formatPrice(order.shipping_fee)}
+              </span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:20px;font-weight:800;color:var(--primary);">
+              <span>최종 금액</span><span>${formatPrice(order.final_price)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 배송지 -->
+      <div class="oc-card">
+        <div class="oc-card-head">🏠 배송지</div>
+        <div class="oc-card-body">
+          <div class="oc-row"><span class="oc-lbl">수령인</span><span class="oc-val">${order.shipping_name}</span></div>
+          <div class="oc-row"><span class="oc-lbl">연락처</span><span class="oc-val">${order.shipping_phone}</span></div>
+          <div class="oc-row"><span class="oc-lbl">주소</span><span class="oc-val">${order.shipping_address}</span></div>
+          ${order.note?`<div class="oc-row"><span class="oc-lbl">메모</span><span class="oc-val">${order.note}</span></div>`:''}
+        </div>
+      </div>
+
+      ${order.payment_method === 'bank_transfer' ? `
+        <!-- 입금 안내 -->
+        <div class="bank-guide">
+          <div class="bank-guide-title">🏦 입금 안내</div>
+          <div class="bank-step">
+            <div class="bank-step-num">1</div>
+            <div class="bank-step-txt">
+              아래 계좌로 <strong style="color:#b45309;">${formatPrice(order.final_price)}</strong>을 이체해주세요.<br>
+              <strong>${settings.bank_account_bank||''} ${settings.bank_account_number||''}</strong>
+              (예금주: ${settings.bank_account_holder||''})
+              <button onclick="copyAcct()" style="background:#f59e0b;color:white;border:none;padding:3px 10px;border-radius:4px;font-size:12px;cursor:pointer;margin-left:6px;font-weight:700;font-family:var(--font);">복사</button>
+            </div>
+          </div>
+          <div class="bank-step">
+            <div class="bank-step-num">2</div>
+            <div class="bank-step-txt">입금이 완료되면 아래 <strong>"입금 완료 확인"</strong> 버튼을 눌러주세요.</div>
+          </div>
+          <div class="bank-step">
+            <div class="bank-step-num">3</div>
+            <div class="bank-step-txt">
+              관리자가 입금을 확인 후 주문을 처리합니다.<br>
+              <span style="color:#92400e;font-weight:600;">⏰ 24시간 이내 미입금 시 자동 취소됩니다.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 입금완료 버튼 -->
+        <div class="confirm-section" id="confirmSection">
+          ${alreadyConfirmed ? `
+            <div class="confirmed-box">
+              <div class="check-big">✅</div>
+              <h3>입금 확인 완료</h3>
+              <p>관리자가 확인 중입니다. 잠시만 기다려주세요.</p>
+            </div>` : `
+            <div style="font-size:14px;color:var(--text-muted);margin-bottom:16px;">
+              이체 후 아래 버튼을 눌러 입금 완료를 알려주세요
+            </div>
+            <button class="confirm-btn" id="confirmBtn" onclick="confirmTransfer()">
+              💰 입금 완료 확인
+            </button>
+            <p style="font-size:12px;color:var(--text-muted);">
+              버튼 클릭 후 관리자 확인까지 잠시 시간이 걸릴 수 있습니다
+            </p>
+          `}
+        </div>
+      ` : ''}
+
+      <!-- 하단 버튼 -->
+      <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;">
+        <a href="mypage.html?tab=orders" class="btn btn-primary btn-full btn-lg">📦 주문 내역 보기</a>
+        <a href="index.html" class="btn btn-secondary btn-full btn-lg">🛍️ 쇼핑 계속</a>
+      </div>
+    `;
+  }
+
+  async function confirmTransfer() {
+    const btn = document.getElementById('confirmBtn');
+    btn.disabled = true; btn.textContent = '처리 중...';
+    try {
+      await API.patch('orders', order.id, {
+        payment_status: 'transfer_confirmed',
+        transfer_confirmed_at: Date.now()
+      });
+      order.payment_status = 'transfer_confirmed';
+      document.getElementById('confirmSection').innerHTML = `
+        <div class="confirmed-box">
+          <div class="check-big">✅</div>
+          <h3>입금 완료 확인됨!</h3>
+          <p>관리자가 확인 후 처리해드립니다. 감사합니다 🎉</p>
+        </div>`;
+      toast('입금 완료가 전달되었습니다! 🎉','success', 4000);
+    } catch(e) {
+      console.error(e);
+      btn.disabled = false; btn.textContent = '💰 입금 완료 확인';
+      toast('오류가 발생했습니다.','error');
+    }
+  }
+
+  function copyAcct() {
+    const num = settings.bank_account_number || '';
+    navigator.clipboard.writeText(num)
+      .then(() => toast('계좌번호 복사 완료!','success'))
+      .catch(() => toast(`계좌번호: ${num}`,'default',5000));
+  }
+
+  init();
+</script>
+</body>
+</html>

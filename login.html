@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 - My Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { min-height:100vh; display:flex; flex-direction:column; }
+    .auth-wrap {
+      flex:1; display:flex; align-items:center; justify-content:center;
+      padding:40px 16px;
+      background:linear-gradient(145deg,#f0fdfa 0%,#ccfbf1 100%);
+    }
+    .auth-box {
+      background:white; border-radius:20px; padding:44px 40px;
+      width:100%; max-width:420px; box-shadow:0 12px 40px rgba(13,148,136,0.14);
+    }
+    @media(max-width:480px){ .auth-box{ padding:32px 24px; } }
+    .auth-icon { text-align:center; font-size:52px; margin-bottom:6px; }
+    .auth-title { text-align:center; font-size:26px; font-weight:800; margin-bottom:6px; }
+    .auth-sub { text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:32px; }
+    .divider { display:flex; align-items:center; gap:12px; margin:22px 0; color:var(--text-muted); font-size:13px; }
+    .divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+    .pw-toggle {
+      position:absolute; right:12px; top:50%; transform:translateY(-50%);
+      background:none; border:none; cursor:pointer; font-size:18px;
+      color:var(--text-muted); padding:4px;
+    }
+
+    /* 관리자 전용 버튼 */
+    .admin-entry-btn {
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      width:100%; padding:11px 20px; border-radius:var(--radius-sm);
+      background:#0f4f4a; color:#7dd3ce; border:none; cursor:pointer;
+      font-size:13px; font-weight:600; font-family:var(--font);
+      transition:all 0.2s; text-decoration:none;
+    }
+    .admin-entry-btn:hover { background:#065f56; color:white; }
+
+    /* 관리자 로그인 패널 (숨김 상태) */
+    .admin-panel {
+      display:none; background:#f0fdfa; border:1.5px solid var(--border);
+      border-radius:var(--radius-sm); padding:20px; margin-top:16px;
+    }
+    .admin-panel.open { display:block; }
+    .admin-panel-title {
+      font-size:13px; font-weight:700; color:#475569;
+      margin-bottom:14px; display:flex; align-items:center; gap:6px;
+    }
+    /* 전화번호 입력 힌트 */
+    .phone-login-hint {
+      font-size:12px; color:var(--text-muted); margin-top:5px;
+      background:#f0f9ff; border-radius:6px; padding:8px 10px;
+      border-left:3px solid #0ea5e9;
+    }
+  </style>
+</head>
+<body>
+<header class="header" id="mainHeader"></header>
+
+<div class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-icon">🔑</div>
+    <h1 class="auth-title">로그인</h1>
+    <p class="auth-sub">My Shop에 오신 것을 환영합니다</p>
+
+    <!-- 일반 로그인 폼 (닉네임 + 전화번호) -->
+    <form onsubmit="doLogin(event)">
+      <div class="form-group">
+        <label class="form-label">닉네임 <span class="required">*</span></label>
+        <input type="text" class="form-control" id="nickname"
+               autocomplete="username" placeholder="닉네임을 입력하세요" required autofocus>
+        <div class="form-error" id="loginErr" style="display:none">⚠️ 닉네임 또는 전화번호가 틀렸습니다</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">전화번호 <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="tel" class="form-control" id="phoneInput"
+                 autocomplete="tel" placeholder="010-0000-0000" required
+                 style="padding-right:46px;">
+          <button type="button" class="pw-toggle" onclick="togglePhoneView()" id="eyeBtn" title="번호 보기/숨기기">👁</button>
+        </div>
+        <div class="phone-login-hint">💡 가입 시 등록한 전화번호로 로그인합니다</div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn" style="margin-top:8px;">
+        로그인
+      </button>
+    </form>
+
+    <div style="text-align:right;margin-top:10px;">
+      <a href="find-account.html" style="font-size:13px;color:var(--text-muted);">🔍 계정 찾기 / 정보 확인</a>
+    </div>
+
+    <div class="divider">계정이 없으신가요?</div>
+    <a href="register.html" class="btn btn-outline btn-full">✏️ 회원가입</a>
+
+    <!-- 관리자 전용 입장 버튼 -->
+    <div style="margin-top:20px;">
+      <button class="admin-entry-btn" onclick="toggleAdminPanel()">
+        ⚙️ 관리자 페이지 접속
+      </button>
+      <div class="admin-panel" id="adminPanel">
+        <div class="admin-panel-title">🔐 관리자 로그인</div>
+        <form onsubmit="doAdminLogin();return false;">
+          <div class="form-group">
+            <label class="form-label" style="font-size:13px;">관리자 닉네임</label>
+            <input type="text" class="form-control" id="adminNick" autocomplete="username" placeholder="닉네임">
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" style="font-size:13px;">비밀번호</label>
+            <div style="position:relative;">
+              <input type="password" class="form-control" id="adminPw" autocomplete="current-password"
+                     placeholder="비밀번호" style="padding-right:46px;">
+              <button type="button" class="pw-toggle" onclick="toggleAdminPw()" id="adminEyeBtn">👁</button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-full"
+            style="background:#0f4f4a;color:white;font-weight:700;padding:11px;">
+            관리자로 로그인
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:18px;">
+      <a href="index.html" style="font-size:13px;color:var(--text-muted);">← 홈으로 돌아가기</a>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="js/utils.js"></script>
+<script>
+  let phoneVisible = false;
+  let adminPwVisible = false;
+
+  async function init() {
+    await renderHeader();
+    if (Auth.getUser()) { window.location.href = 'index.html'; return; }
+    // 전화번호 자동 포맷팅
+    const phoneEl = document.getElementById('phoneInput');
+    initPhoneInput(phoneEl);
+    const p = new URLSearchParams(location.search);
+    if (p.get('redirect') === 'cart') toast('로그인 후 이용해주세요.', 'warning');
+  }
+
+  /* 전화번호 보기/숨기기 */
+  function togglePhoneView() {
+    phoneVisible = !phoneVisible;
+    const el = document.getElementById('phoneInput');
+    // tel 타입은 일부 브라우저에서 text 전환 필요
+    el.type = phoneVisible ? 'text' : 'tel';
+    document.getElementById('eyeBtn').textContent = phoneVisible ? '🙈' : '👁';
+  }
+
+  function toggleAdminPw() {
+    adminPwVisible = !adminPwVisible;
+    document.getElementById('adminPw').type = adminPwVisible ? 'text' : 'password';
+    document.getElementById('adminEyeBtn').textContent = adminPwVisible ? '🙈' : '👁';
+  }
+
+  function toggleAdminPanel() {
+    const panel = document.getElementById('adminPanel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) {
+      setTimeout(() => document.getElementById('adminNick').focus(), 100);
+    }
+  }
+
+  /* ===== 일반 로그인 (닉네임 + 전화번호) ===== */
+  async function doLogin(e) {
+    e.preventDefault();
+    const nick  = document.getElementById('nickname').value.trim();
+    const phone = document.getElementById('phoneInput').value.trim();
+    const errEl = document.getElementById('loginErr');
+    errEl.style.display = 'none';
+    document.getElementById('nickname').classList.remove('error');
+    document.getElementById('phoneInput').classList.remove('error');
+
+    if (!nick || !phone) { toast('닉네임과 전화번호를 모두 입력해주세요.', 'warning'); return; }
+
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = '로그인 중...';
+
+    try {
+      const res = await API.get('users', { limit: 500 });
+      // 전화번호는 숫자만 비교
+      const phoneNum = phone.replace(/\D/g,'');
+      const user = (res.data||[]).find(u =>
+        u.nickname === nick &&
+        u.role !== 'admin' &&
+        u.phone && u.phone.replace(/\D/g,'') === phoneNum
+      );
+      if (!user) {
+        errEl.style.display = 'flex';
+        document.getElementById('nickname').classList.add('error');
+        document.getElementById('phoneInput').classList.add('error');
+        return;
+      }
+      Auth.setUser({ id: user.id, nickname: user.nickname, name: user.name, role: user.role || 'user' });
+      toast('로그인 성공! 🎉', 'success');
+      const from = new URLSearchParams(location.search).get('from') || 'index.html';
+      setTimeout(() => { window.location.href = from; }, 900);
+    } catch(err) {
+      console.error(err); toast('오류가 발생했습니다.', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '로그인';
+    }
+  }
+
+  /* ===== 관리자 로그인 ===== */
+  async function doAdminLogin() {
+    const nick = document.getElementById('adminNick').value.trim();
+    const pw   = document.getElementById('adminPw').value;
+    if (!nick || !pw) { toast('관리자 정보를 입력해주세요.', 'warning'); return; }
+
+    showLoading();
+    try {
+      const r = await API.get('users', { limit: 200 });
+      let adminUser = (r.data||[]).find(u => u.role === 'admin' && u.nickname === nick);
+
+      // 닉네임이 맞지 않아도 role=admin 계정이 하나뿐이면 그걸로 시도 (닉네임 변경 대응)
+      if (!adminUser) {
+        const anyAdmin = (r.data||[]).find(u => u.role === 'admin');
+        if (anyAdmin && anyAdmin.nickname === nick) {
+          adminUser = anyAdmin;
+        }
+      }
+
+      if (!adminUser || adminUser.password !== hashPassword(pw)) {
+        hideLoading();
+        toast('관리자 정보가 올바르지 않습니다.', 'error'); return;
+      }
+
+      Auth.setUser({ id: adminUser.id, nickname: adminUser.nickname, name: adminUser.name, role: 'admin' });
+      hideLoading();
+      toast('관리자로 로그인되었습니다. 👑', 'success');
+      setTimeout(() => { window.location.href = 'admin.html'; }, 900);
+    } catch(err) {
+      hideLoading();
+      console.error(err); toast('오류가 발생했습니다.', 'error');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,2090 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 페이지 - My Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- SheetJS for Excel download -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    .admin-layout {
+      display: flex;
+      min-height: calc(100vh - 64px);
+    }
+    .admin-sidebar {
+      width: 240px;
+      background: #0f4f4a;
+      color: white;
+      flex-shrink: 0;
+      position: sticky;
+      top: 64px;
+      height: calc(100vh - 64px);
+      overflow-y: auto;
+    }
+    .sidebar-header {
+      padding: 24px 20px;
+      border-bottom: 1px solid #1a6b64;
+    }
+    .sidebar-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .sidebar-subtitle { font-size: 12px; color: #7dd3ce; }
+    .sidebar-nav { padding: 12px 0; }
+    .sidebar-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #7dd3ce;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
+    .sidebar-nav-item.active { color: white; background: rgba(13,148,136,0.28); border-left-color: var(--primary); }
+    .sidebar-nav-item .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+    .sidebar-section-label {
+      padding: 16px 20px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #5eada6;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .admin-content {
+      flex: 1;
+      background: var(--bg);
+      overflow-y: auto;
+      padding: 32px;
+    }
+
+    .admin-tab { display: none; }
+    .admin-tab.active { display: block; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-box {
+      background: white;
+      border-radius: var(--radius);
+      padding: 20px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .stat-box.blue::before { background: var(--primary); }
+    .stat-box.green::before { background: var(--success); }
+    .stat-box.yellow::before { background: var(--warning); }
+    .stat-box.red::before { background: var(--danger); }
+    .stat-box.purple::before { background: #7c3aed; }
+    
+    .stat-label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 28px; font-weight: 800; margin: 6px 0; }
+    .stat-change { font-size: 12px; color: var(--text-muted); }
+
+    .page-title { font-size: 24px; font-weight: 800; margin-bottom: 24px; }
+    .page-subtitle { font-size: 14px; color: var(--text-muted); margin-top: -18px; margin-bottom: 24px; }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .toolbar-left { flex: 1; display: flex; gap: 10px; flex-wrap: wrap; }
+    .toolbar-right { display: flex; gap: 10px; }
+
+    .product-admin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .product-admin-card {
+      background: white;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    .product-admin-card:hover { box-shadow: var(--shadow); }
+    .product-admin-img {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      overflow: hidden;
+      position: relative;
+    }
+    .product-admin-img img { width: 100%; height: 100%; object-fit: cover; }
+    .product-status-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+    }
+    .product-admin-info { padding: 14px; }
+    .product-admin-name { font-weight: 700; margin-bottom: 4px; font-size: 14px; }
+    .product-admin-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      gap: 8px;
+    }
+    .product-admin-actions { display: flex; gap: 8px; }
+
+    /* Form styles */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+    
+    .tag-input-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      min-height: 46px;
+      background: white;
+      cursor: text;
+      transition: var(--transition);
+    }
+    .tag-input-container:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }
+    .tag { display: flex; align-items: center; gap: 4px; background: var(--primary-light); color: var(--primary); padding: 3px 10px; border-radius: 100px; font-size: 13px; font-weight: 600; }
+    .tag button { background: none; border: none; cursor: pointer; color: var(--primary); font-size: 14px; padding: 0; line-height: 1; }
+    .tag-input { border: none; outline: none; font-size: 14px; min-width: 80px; flex: 1; font-family: var(--font); }
+
+    /* Stock grid */
+    .stock-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    .stock-cell {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      text-align: center;
+    }
+    .stock-cell-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .stock-cell input {
+      width: 70px;
+      padding: 5px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    /* Orders table */
+    .order-row { cursor: pointer; }
+    .order-row:hover td { background: var(--primary-light); }
+    
+    .status-select {
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      background: white;
+      cursor: pointer;
+    }
+
+    /* Settings */
+    .settings-card {
+      background: white;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .settings-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .admin-sidebar { display: none; }
+      .admin-content { padding: 16px; }
+      .product-admin-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* Image preview */
+    .img-preview {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      margin-top: 8px;
+      display: none;
+    }
+    .img-preview.visible { display: block; }
+
+    /* 파일 업로드 드롭존 */
+    .img-upload-zone {
+      border: 2px dashed var(--border); border-radius: var(--radius-sm);
+      padding: 28px 20px; text-align: center; cursor: pointer;
+      transition: var(--transition); background: var(--bg);
+    }
+    .img-upload-zone:hover, .img-upload-zone.drag-over {
+      border-color: var(--primary); background: var(--primary-light);
+    }
+    .img-upload-zone .upload-icon { font-size: 36px; margin-bottom: 8px; }
+    .img-upload-zone p { font-size: 14px; color: var(--text-muted); margin: 0; }
+    .img-upload-zone small { font-size: 12px; color: var(--text-light); }
+    #imgFileInput { display: none; }
+  </style>
+</head>
+<body>
+
+<header class="header" id="mainHeader"></header>
+
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">⚙️ 관리자 패널</div>
+      <div class="sidebar-subtitle" id="adminName">로딩 중...</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">대시보드</div>
+      <div class="sidebar-nav-item active" id="nav-dashboard" onclick="showTab('dashboard')">
+        <span class="nav-icon">📊</span> 대시보드
+      </div>
+
+      <div class="sidebar-section-label">상품 관리</div>
+      <div class="sidebar-nav-item" id="nav-products" onclick="showTab('products')">
+        <span class="nav-icon">🛍️</span> 상품 목록
+      </div>
+      <div class="sidebar-nav-item" id="nav-add-product" onclick="showTab('add-product')">
+        <span class="nav-icon">➕</span> 상품 등록 / 수정
+      </div>
+
+      <div class="sidebar-section-label">주문 관리</div>
+      <div class="sidebar-nav-item" id="nav-orders" onclick="showTab('orders')">
+        <span class="nav-icon">📦</span> 주문 확인
+      </div>
+      <div class="sidebar-nav-item" id="nav-orders-pending" onclick="showTab('orders');filterOrderStatus('transfer_confirmed')">
+        <span class="nav-icon">💰</span> 입금 확인 대기
+      </div>
+
+      <div class="sidebar-section-label">회원 / 설정</div>
+      <div class="sidebar-nav-item" id="nav-members" onclick="showTab('members')">
+        <span class="nav-icon">👥</span> 회원 관리
+      </div>
+      <div class="sidebar-nav-item" id="nav-settings" onclick="showTab('settings')">
+        <span class="nav-icon">⚙️</span> 쇼핑몰 설정
+      </div>
+      <div class="sidebar-nav-item" id="nav-company" onclick="showTab('company')">
+        <span class="nav-icon">🏢</span> 회사 정보
+      </div>
+
+      <div class="sidebar-section-label">배송</div>
+      <div class="sidebar-nav-item" id="nav-delivery" onclick="showTab('delivery')">
+        <span class="nav-icon">📦</span> 택배 업로드
+      </div>
+
+      <div class="sidebar-section-label">데이터</div>
+      <div class="sidebar-nav-item" onclick="exportExcel()">
+        <span class="nav-icon">📊</span> 엑셀 내보내기
+      </div>
+      <div class="sidebar-nav-item" onclick="refreshAll()">
+        <span class="nav-icon">🔄</span> 새로고침
+      </div>
+
+      <div class="sidebar-section-label">보안</div>
+      <div class="sidebar-nav-item" id="nav-admin-pw" onclick="showTab('admin-pw')">
+        <span class="nav-icon">🔑</span> 비밀번호 변경
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="admin-content">
+    <!-- Dashboard -->
+    <div class="admin-tab active" id="tab-dashboard">
+      <h1 class="page-title">📊 대시보드</h1>
+      
+      <div class="stats-row" id="dashStats">
+        <div style="text-align:center;padding:40px;color:var(--text-muted);grid-column:1/-1;">
+          <div class="spinner" style="margin:0 auto 16px;"></div>로딩 중...
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="dashBottom">
+        <!-- Recent orders -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">최근 주문</div>
+            <button class="btn btn-sm btn-secondary" onclick="showTab('orders')">전체보기</button>
+          </div>
+          <div id="recentOrders" style="padding:0;"></div>
+        </div>
+        <!-- Low stock -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">재고 부족 상품</div>
+            <button class="btn btn-sm btn-secondary" onclick="showTab('products')">전체보기</button>
+          </div>
+          <div id="lowStockProducts" style="padding:16px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products List -->
+    <div class="admin-tab" id="tab-products">
+      <h1 class="page-title">🛍️ 상품 목록</h1>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <input type="text" class="form-control" id="productSearch" placeholder="상품명 검색..." style="max-width:280px" oninput="filterAdminProducts()">
+          <select class="form-control" id="productStatusFilter" style="max-width:150px" onchange="filterAdminProducts()">
+            <option value="">전체 상태</option>
+            <option value="active">판매중</option>
+            <option value="inactive">숨김</option>
+          </select>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-primary" onclick="showTab('add-product')">➕ 상품 등록</button>
+        </div>
+      </div>
+      <div class="product-admin-grid" id="adminProductGrid">
+        <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
+          <div class="spinner" style="margin:0 auto 16px;"></div>로딩 중...
+        </div>
+      </div>
+    </div>
+
+    <!-- Add/Edit Product -->
+    <div class="admin-tab" id="tab-add-product">
+      <h1 class="page-title" id="productFormTitle">➕ 상품 등록</h1>
+      <div style="max-width:800px;">
+        <form id="productForm" onsubmit="saveProduct(event)">
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><div class="card-title">기본 정보</div></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">상품명 <span class="required">*</span></label>
+                <input type="text" class="form-control" id="pName" placeholder="상품명을 입력하세요" required>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">카테고리</label>
+                  <input type="text" class="form-control" id="pCategory" placeholder="예: 티셔츠, 바지, 후드">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">판매 가격 <span class="required">*</span></label>
+                  <input type="number" class="form-control" id="pPrice" placeholder="0" min="0" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">상품 설명</label>
+                <textarea class="form-control" id="pDescription" rows="4" placeholder="상품 설명을 입력하세요"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><div class="card-title">상품 이미지</div></div>
+            <div class="card-body">
+              <!-- 파일 업로드 드롭존 -->
+              <div class="img-upload-zone" id="imgUploadZone"
+                   onclick="document.getElementById('imgFileInput').click()"
+                   ondragover="onImgDragOver(event)" ondragleave="onImgDragLeave(event)"
+                   ondrop="onImgDrop(event)">
+                <div class="upload-icon">🖼️</div>
+                <p><strong>클릭</strong>하거나 JPG 이미지를 드래그하세요</p>
+                <small>JPG 파일만 허용 (최대 5MB)</small>
+              </div>
+              <input type="file" id="imgFileInput" accept="image/jpeg,.jpg,.jpeg"
+                     onchange="onImgFileChange(event)">
+              <!-- 미리보기 -->
+              <img id="thumbPreview" class="img-preview" alt="미리보기">
+              <div id="imgFileName" style="font-size:12px;color:var(--text-muted);margin-top:6px;"></div>
+              <!-- URL 직접 입력(보조) -->
+              <details style="margin-top:12px;">
+                <summary style="font-size:13px;color:var(--text-muted);cursor:pointer;">또는 이미지 URL 직접 입력</summary>
+                <input type="text" class="form-control" id="pThumbnailUrl" placeholder="https://..."
+                       style="margin-top:8px;" oninput="previewThumbUrl(this.value)">
+              </details>
+              <!-- 실제로 저장되는 hidden 필드 -->
+              <input type="hidden" id="pThumbnail">
+            </div>
+          </div>
+
+          <!-- ★ 색상 옵션 카드 -->
+          <div class="card" style="margin-bottom:16px;border:2px solid #ccfbf1;">
+            <div class="card-header" style="background:#f0fdfa;">
+              <div class="card-title">🎨 색상 옵션 설정</div>
+              <span style="font-size:12px;color:var(--text-muted);">구매 화면에서 색상 선택 버튼으로 표시됩니다</span>
+            </div>
+            <div class="card-body">
+              <div style="background:#f0fdfa;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;color:#065f46;">
+                💡 <strong>사용법:</strong> 아래 입력란에 색상명을 입력하고 <kbd style="background:#0d9488;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">Enter</kbd> 를 누르면 추가됩니다. × 버튼으로 삭제합니다.
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" style="font-size:15px;font-weight:700;">색상 추가
+                  <span style="font-size:12px;color:var(--text-muted);font-weight:400;"> (없으면 구매 시 색상 선택 없음)</span>
+                </label>
+                <div class="tag-input-container" id="colorTagContainer" onclick="focusColorInput()" style="min-height:52px;">
+                  <input type="text" class="tag-input" id="colorInput" placeholder="예: 화이트  →  Enter"
+                         onkeydown="addTag(event, 'color')">
+                </div>
+                <div class="form-hint" style="margin-top:6px;">
+                  빠른 추가:
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddColor('화이트')">화이트</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddColor('블랙')">블랙</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddColor('그레이')">그레이</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddColor('네이비')">네이비</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddColor('베이지')">베이지</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddColor('레드')">레드</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddColor('핑크')">핑크</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddColor('카키')">카키</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ★ 사이즈 옵션 카드 -->
+          <div class="card" style="margin-bottom:16px;border:2px solid #dbeafe;">
+            <div class="card-header" style="background:#eff6ff;">
+              <div class="card-title">📏 사이즈 옵션 설정</div>
+              <span style="font-size:12px;color:var(--text-muted);">구매 화면에서 사이즈 선택 버튼으로 표시됩니다</span>
+            </div>
+            <div class="card-body">
+              <div style="background:#eff6ff;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;color:#1e40af;">
+                💡 <strong>사용법:</strong> 아래 입력란에 사이즈를 입력하고 <kbd style="background:#3b82f6;color:white;padding:2px 6px;border-radius:4px;font-size:11px;">Enter</kbd> 를 누르면 추가됩니다. × 버튼으로 삭제합니다.
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" style="font-size:15px;font-weight:700;">사이즈 추가
+                  <span style="font-size:12px;color:var(--text-muted);font-weight:400;"> (없으면 구매 시 사이즈 선택 없음)</span>
+                </label>
+                <div class="tag-input-container" id="sizeTagContainer" onclick="focusSizeInput()" style="min-height:52px;">
+                  <input type="text" class="tag-input" id="sizeInput" placeholder="예: M  →  Enter"
+                         onkeydown="addTag(event, 'size')">
+                </div>
+                <div class="form-hint" style="margin-top:6px;">
+                  빠른 추가:
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddSize('XS')">XS</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddSize('S')">S</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddSize('M')">M</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddSize('L')">L</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddSize('XL')">XL</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddSize('XXL')">XXL</button>
+                  <button type="button" class="btn btn-sm btn-secondary" style="margin:2px;" onclick="quickAddSize('FREE')">FREE</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ★ 추가구성 옵션 카드 -->
+          <div class="card" style="margin-bottom:16px;border:2px solid #fef3c7;">
+            <div class="card-header" style="background:#fffbeb;">
+              <div class="card-title">➕ 추가구성 옵션 설정</div>
+              <span style="font-size:12px;color:var(--text-muted);">색상·사이즈 외 추가 선택 항목</span>
+            </div>
+            <div class="card-body">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" style="font-size:15px;font-weight:700;">추가구성 추가
+                  <span style="font-size:12px;color:var(--text-muted);font-weight:400;"> (선택사항)</span>
+                </label>
+                <div class="tag-input-container" id="extraTagContainer" onclick="focusExtraInput()" style="min-height:52px;">
+                  <input type="text" class="tag-input" id="extraInput" placeholder="예: 선물포장  →  Enter"
+                         onkeydown="addTag(event, 'extra')">
+                </div>
+                <div class="form-hint">예: 선물포장, 기본포장, A세트, B세트 (Enter로 추가)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ★ 유통기한 카드 추가 -->
+          <div class="card" style="margin-bottom:16px;border:2px solid #fef3c7;">
+            <div class="card-header" style="background:#fffbeb;">
+              <div class="card-title">📅 유통기한 설정</div>
+              <span style="font-size:12px;color:var(--text-muted);">식품이나 유통기한이 있는 상품에 사용하세요</span>
+            </div>
+            <div class="card-body">
+              <div style="background:#fef3c7;border-radius:8px;padding:11px;margin-bottom:12px;font-size:12px;color:#92400e;">
+                💡 <strong>입력 안내:</strong> 날짜를 선택하거나 직접 입력하세요 (예: 2025-12-31). 유통기한이 없는 상품은 비워두세요.
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">유통기한 (YYYY-MM-DD)</label>
+                <input type="date" class="form-control" id="pExpiryDate" style="max-width:220px;">
+                <div class="form-hint">또는 직접 입력: 예) 2025-12-31, 제조일로부터 2년, 별도 표기</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+              <div class="card-title">재고 관리</div>
+              <div style="font-size:13px;color:var(--text-muted);">총 재고: <strong id="totalStockDisplay">0</strong>개</div>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">전체 재고 수량 <span class="required">*</span></label>
+                <input type="number" class="form-control" id="pStock" value="0" min="0" required 
+                       oninput="updateTotalStock(this.value)" style="max-width:200px;">
+                <div class="form-hint">옵션별 재고 설정 시 아래 표에 입력하세요 (선택사항)</div>
+              </div>
+              <div id="optionStockGrid" style="display:none;">
+                <label class="form-label">옵션별 재고 설정</label>
+                <div class="stock-grid" id="stockGrid"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:24px;">
+            <div class="card-body" style="display:flex;align-items:center;gap:16px;">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;">
+                <input type="checkbox" id="pIsActive" checked style="width:18px;height:18px;accent-color:var(--primary);">
+                <span>판매 활성화</span>
+              </label>
+              <span style="font-size:13px;color:var(--text-muted);">체크 해제 시 상품이 숨겨집니다</span>
+            </div>
+          </div>
+
+          <input type="hidden" id="editProductId">
+
+          <div style="display:flex;gap:12px;">
+            <button type="submit" class="btn btn-primary btn-lg">💾 저장</button>
+            <button type="button" class="btn btn-secondary btn-lg" onclick="resetProductForm()">초기화</button>
+            <button type="button" class="btn btn-secondary" onclick="showTab('products')">← 목록으로</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Orders -->
+    <div class="admin-tab" id="tab-orders">
+      <h1 class="page-title">📦 주문 관리</h1>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <input type="text" class="form-control" id="orderSearch" placeholder="주문번호/주문자 검색..." style="max-width:280px" oninput="filterAdminOrders()">
+          <select class="form-control" id="orderStatusFilter" style="max-width:180px" onchange="filterAdminOrders()">
+            <option value="">전체 상태</option>
+            <option value="pending">결제 대기</option>
+            <option value="transfer_confirmed">입금 완료(고객)</option>
+            <option value="payment_confirmed">결제 확인</option>
+            <option value="shipped">배송 중</option>
+            <option value="delivered">배송 완료</option>
+            <option value="cancelled">취소</option>
+          </select>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-success" onclick="exportExcel()">📊 엑셀 내보내기</button>
+        </div>
+      </div>
+      <div class="table-container" id="ordersTableContainer">
+        <div style="text-align:center;padding:60px;color:var(--text-muted);">
+          <div class="spinner" style="margin:0 auto 16px;"></div>로딩 중...
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="admin-tab" id="tab-settings">
+      <h1 class="page-title">⚙️ 쇼핑몰 설정</h1>
+      <div style="max-width:600px;">
+        <div class="settings-card">
+          <div class="settings-title">🏪 기본 정보</div>
+          <div class="form-group">
+            <label class="form-label">쇼핑몰 이름</label>
+            <input type="text" class="form-control" id="settingShopName">
+          </div>
+          <div class="form-group">
+            <label class="form-label">쇼핑몰 소개 문구</label>
+            <input type="text" class="form-control" id="settingShopDesc">
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-title">🚚 배송비 설정</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">기본 배송비 (원)</label>
+              <input type="number" class="form-control" id="settingShippingFee" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">무료배송 기준 금액 (원)</label>
+              <input type="number" class="form-control" id="settingFreeThreshold" min="0">
+            </div>
+          </div>
+          <div class="form-hint" style="margin-top:-10px;">무료배송 기준 금액 이상 주문 시 배송비 무료</div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-title">🏦 계좌이체 정보</div>
+          <div class="form-group">
+            <label class="form-label">은행명</label>
+            <input type="text" class="form-control" id="settingBankName" placeholder="예: 국민은행">
+          </div>
+          <div class="form-group">
+            <label class="form-label">계좌번호</label>
+            <input type="text" class="form-control" id="settingBankNumber" placeholder="예: 123-456-789012">
+          </div>
+          <div class="form-group">
+            <label class="form-label">예금주</label>
+            <input type="text" class="form-control" id="settingBankHolder" placeholder="예금주명">
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-lg btn-full" onclick="saveSettings()">💾 설정 저장</button>
+      </div>
+    </div>
+
+    <!-- Members -->
+    <div class="admin-tab" id="tab-members">
+      <h1 class="page-title">👥 회원 관리</h1>
+      <div class="table-container" id="membersTableContainer">
+        <div style="text-align:center;padding:60px;color:var(--text-muted);">
+          <div class="spinner" style="margin:0 auto 16px;"></div>로딩 중...
+        </div>
+      </div>
+    </div>
+
+    <!-- Company Info -->
+    <div class="admin-tab" id="tab-company">
+      <h1 class="page-title">🏢 회사 정보 등록 / 수정</h1>
+      <div style="max-width:640px;">
+
+        <div class="settings-card">
+          <div class="settings-title">🏪 사업자 기본 정보</div>
+          <div class="form-group">
+            <label class="form-label">회사(상호)명</label>
+            <input type="text" class="form-control" id="companyName" placeholder="예: (주)마이샵">
+          </div>
+          <div class="form-group">
+            <label class="form-label">대표자명</label>
+            <input type="text" class="form-control" id="companyOwner" placeholder="대표자 이름">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">사업자등록번호</label>
+              <input type="text" class="form-control" id="companyBizNum" placeholder="000-00-00000">
+            </div>
+            <div class="form-group">
+              <label class="form-label">통신판매업 신고번호</label>
+              <input type="text" class="form-control" id="companyMailOrder" placeholder="제2024-서울-00000호">
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-title">📍 주소 / 연락처</div>
+          <div class="form-group">
+            <label class="form-label">사업장 주소</label>
+            <input type="text" class="form-control" id="companyAddress" placeholder="예: 서울특별시 강남구 테헤란로 123">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">고객센터 전화번호</label>
+              <input type="text" class="form-control" id="companyPhone" placeholder="예: 02-0000-0000">
+            </div>
+            <div class="form-group">
+              <label class="form-label">이메일</label>
+              <input type="email" class="form-control" id="companyEmail" placeholder="예: shop@example.com">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">고객센터 운영시간</label>
+            <input type="text" class="form-control" id="companyHours" placeholder="예: 평일 09:00~18:00 (토·일·공휴일 휴무)">
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-title">🌐 SNS / 추가 정보</div>
+          <div class="form-group">
+            <label class="form-label">인스타그램 URL</label>
+            <input type="text" class="form-control" id="companyInsta" placeholder="https://instagram.com/...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">카카오 채널 URL</label>
+            <input type="text" class="form-control" id="companyKakao" placeholder="https://pf.kakao.com/...">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">공지사항 / 안내 문구</label>
+            <textarea class="form-control" id="companyNotice" rows="3" placeholder="홈페이지 하단에 표시될 안내 문구"></textarea>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-lg btn-full" onclick="saveCompanyInfo()">💾 회사 정보 저장</button>
+      </div>
+    </div>
+
+    <!-- 택배 업로드 탭 -->
+    <div class="admin-tab" id="tab-delivery">
+      <h1 class="page-title">📦 택배 업로드 양식</h1>
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <div class="card-title">📦 택배 업로드 안내</div>
+        </div>
+        <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px;">결제 완료된 주문을 택배사 업로드 양식으로 엑셀 다운로드하거나, 직접 입력하여 생성할 수 있습니다.</p>
+        <a href="delivery-upload.html" target="_blank" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;">
+          📦 택배 업로드 페이지 열기
+        </a>
+      </div>
+
+      <!-- 빠른 다운로드: 결제완료 주문 -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">⚡ 결제완료 주문 빠른 다운로드</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="quickCourierSelect" class="form-control" style="width:180px;">
+              <option value="cj_normal">CJ대한통운(일반)</option>
+              <option value="cj_bulk">CJ대한통운(대량)</option>
+              <option value="hanjin_normal">한진택배(일반)</option>
+              <option value="hanjin_bulk">한진택배(대량)</option>
+              <option value="lotte_normal">롯데택배(일반)</option>
+              <option value="lotte_bulk">롯데택배(대량)</option>
+              <option value="today_bulk">오늘픽업(대량)</option>
+            </select>
+            <select id="quickBoxSelect" class="form-control" style="width:140px;">
+              <option value="A">A (5kg/80cm)</option>
+              <option value="S">S (2kg/60cm)</option>
+              <option value="B">B (10kg/100cm)</option>
+              <option value="C">C (15kg/120cm)</option>
+              <option value="D">D (20kg/140cm)</option>
+              <option value="E">E (20kg/160cm)</option>
+              <option value="F">F (25kg/190cm)</option>
+            </select>
+            <button class="btn btn-primary" onclick="quickDeliveryDownload()">📥 엑셀 다운로드</button>
+          </div>
+        </div>
+        <div id="quickDeliveryOrders" style="padding:20px;text-align:center;color:var(--text-muted);">
+          <button class="btn btn-secondary" onclick="loadQuickDeliveryOrders()">🔄 결제완료 주문 불러오기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 관리자 비밀번호 변경 탭 -->
+    <div class="admin-tab" id="tab-admin-pw">
+      <h1 class="page-title">🔑 관리자 비밀번호 변경</h1>
+      <div style="max-width:480px;">
+        <div class="settings-card">
+          <div class="settings-title">🔐 비밀번호 변경</div>
+          <form onsubmit="changeAdminPw(); return false;" autocomplete="on">
+          <div class="form-group">
+            <label class="form-label">현재 비밀번호</label>
+            <input type="password" class="form-control" id="adminCurrentPw" placeholder="현재 비밀번호 입력" autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label">새 비밀번호 <span style="color:#ef4444;">*</span></label>
+            <input type="password" class="form-control" id="adminNewPw" placeholder="새 비밀번호 (4자 이상)" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label">새 비밀번호 확인 <span style="color:#ef4444;">*</span></label>
+            <input type="password" class="form-control" id="adminNewPw2" placeholder="새 비밀번호 다시 입력" autocomplete="new-password">
+            <div id="pwMatchHint" style="font-size:12px;margin-top:4px;"></div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">🔐 비밀번호 변경</button>
+          </form>
+        </div>
+
+        <div class="settings-card" style="margin-top:16px;">
+          <div class="settings-title">💡 비밀번호 분실 시</div>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
+            비밀번호를 잊어버린 경우 아래 전용 페이지에서 재설정할 수 있습니다.
+          </p>
+          <a href="admin-reset.html" target="_blank" class="btn btn-secondary" style="display:inline-block;text-decoration:none;">
+            🔑 비밀번호 재설정 페이지 열기
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal-overlay" id="orderDetailModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">📋 주문 상세</div>
+      <button class="modal-close" onclick="closeModal('orderDetailModal')">✕</button>
+    </div>
+    <div class="modal-body" id="orderDetailContent"></div>
+  </div>
+</div>
+
+<!-- Stock Edit Modal -->
+<div class="modal-overlay" id="stockModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📦 재고 수정</div>
+      <button class="modal-close" onclick="closeModal('stockModal')">✕</button>
+    </div>
+    <div class="modal-body" id="stockModalContent"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('stockModal')">취소</button>
+      <button class="btn btn-primary" onclick="saveStock()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+
+<script src="js/utils.js"></script>
+<script>
+  // ===== HELPER =====
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ===== STATE =====
+  let allAdminProducts = [];
+  let allOrders = [];
+  let allMembers = [];
+  let allSettings = {};
+  let editingProductId = null;
+  let colorTags = [];
+  let sizeTags  = [];
+  let extraTags = [];
+  let editingStockProductId = null;
+
+  // ===== INIT =====
+  async function init() {
+    if (!Auth.isAdmin()) {
+      toast('관리자만 접근할 수 있습니다.', 'error');
+      setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+      return;
+    }
+    await renderHeader('admin');
+    document.getElementById('adminName').textContent = Auth.getUser().nickname;
+    await loadAll();
+  }
+
+  async function loadAll() {
+    await Promise.all([loadProducts(), loadOrders(), loadSettings(), loadMembers()]);
+    renderDashboard();
+    renderAdminProducts();
+  }
+
+  // ===== DATA LOADERS =====
+  async function loadProducts() {
+    const res = await API.get('products', { limit: 500 });
+    allAdminProducts = res.data || [];
+  }
+
+  async function loadOrders() {
+    const res = await API.get('orders', { limit: 500, sort: 'created_at' });
+    allOrders = (res.data || []).sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+  }
+
+  async function loadSettings() {
+    const res = await API.get('settings', { limit: 200 });
+    allSettings = {};
+    (res.data || []).forEach(s => { allSettings[s.key] = { id: s.id, value: s.value }; });
+    
+    // 쇼핑몰 기본 설정 폼 채우기
+    document.getElementById('settingShopName').value       = allSettings.shop_name?.value || '';
+    document.getElementById('settingShopDesc').value       = allSettings.shop_description?.value || '';
+    document.getElementById('settingShippingFee').value    = allSettings.shipping_fee_standard?.value || 3000;
+    document.getElementById('settingFreeThreshold').value  = allSettings.shipping_fee_free_threshold?.value || 50000;
+    document.getElementById('settingBankName').value       = allSettings.bank_account_bank?.value || '';
+    document.getElementById('settingBankNumber').value     = allSettings.bank_account_number?.value || '';
+    document.getElementById('settingBankHolder').value     = allSettings.bank_account_holder?.value || '';
+  }
+
+  async function loadMembers() {
+    const res = await API.get('users', { limit: 500 });
+    allMembers = (res.data || []).filter(u => u.role !== 'admin');
+  }
+
+  // ===== TAB MANAGEMENT =====
+  function showTab(tabName) {
+    // 모든 탭 콘텐츠 숨기기
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    // 모든 사이드바 항목 비활성화
+    document.querySelectorAll('.sidebar-nav-item').forEach(n => n.classList.remove('active'));
+
+    // 해당 탭 표시
+    const tabEl = document.getElementById(`tab-${tabName}`);
+    if (tabEl) tabEl.classList.add('active');
+
+    // 해당 사이드바 항목 활성화 (id 기반)
+    const navEl = document.getElementById(`nav-${tabName}`);
+    if (navEl) navEl.classList.add('active');
+
+    // 탭별 렌더링
+    if (tabName === 'products') renderAdminProducts();
+    if (tabName === 'orders')   renderAdminOrders();
+    if (tabName === 'members')  renderMembers();
+    if (tabName === 'company')  loadCompanyInfo();
+  }
+
+  // ===== DASHBOARD =====
+  function renderDashboard() {
+    const totalOrders = allOrders.length;
+    const pendingOrders = allOrders.filter(o => o.payment_status === 'pending').length;
+    const transferConfirmed = allOrders.filter(o => o.payment_status === 'transfer_confirmed').length;
+    const totalRevenue = allOrders
+      .filter(o => ['payment_confirmed','shipped','delivered'].includes(o.payment_status))
+      .reduce((sum, o) => sum + (o.final_price || 0), 0);
+    const totalProducts = allAdminProducts.length;
+    const lowStockProducts = allAdminProducts.filter(p => parseInt(p.stock || 0) <= 5 && parseInt(p.stock || 0) > 0);
+    const outOfStock = allAdminProducts.filter(p => parseInt(p.stock || 0) === 0).length;
+
+    document.getElementById('dashStats').innerHTML = `
+      <div class="stat-box blue">
+        <div class="stat-label">전체 주문</div>
+        <div class="stat-value">${totalOrders}</div>
+        <div class="stat-change">누적 주문 건수</div>
+      </div>
+      <div class="stat-box yellow">
+        <div class="stat-label">입금 확인 대기</div>
+        <div class="stat-value" style="color:var(--warning)">${transferConfirmed}</div>
+        <div class="stat-change">처리 필요</div>
+      </div>
+      <div class="stat-box green">
+        <div class="stat-label">확인된 매출</div>
+        <div class="stat-value" style="font-size:20px;color:var(--success)">${formatPrice(totalRevenue)}</div>
+        <div class="stat-change">결제 확인 완료 기준</div>
+      </div>
+      <div class="stat-box purple">
+        <div class="stat-label">상품 수</div>
+        <div class="stat-value">${totalProducts}</div>
+        <div class="stat-change">품절 ${outOfStock}개</div>
+      </div>
+      <div class="stat-box red">
+        <div class="stat-label">재고 부족</div>
+        <div class="stat-value" style="color:var(--danger)">${lowStockProducts.length}</div>
+        <div class="stat-change">5개 이하</div>
+      </div>
+    `;
+
+    // Recent orders
+    const recent = allOrders.slice(0, 5);
+    document.getElementById('recentOrders').innerHTML = recent.length === 0 ? 
+      '<div style="padding:24px;text-align:center;color:var(--text-muted)">주문 없음</div>' :
+      recent.map(o => `
+        <div onclick="viewOrder('${o.id}')" style="padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background=''">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <span style="font-size:13px;font-weight:600;">${o.order_number}</span>
+            ${statusBadge(o.payment_status)}
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);">${o.shipping_name} · ${formatPrice(o.final_price)}</div>
+        </div>
+      `).join('');
+
+    // Low stock
+    document.getElementById('lowStockProducts').innerHTML = lowStockProducts.length === 0 ?
+      '<div style="text-align:center;color:var(--success)">✅ 재고 부족 상품 없음</div>' :
+      lowStockProducts.map(p => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:14px;font-weight:600;">${p.name}</span>
+          <span class="badge badge-warning">${p.stock}개</span>
+        </div>
+      `).join('');
+  }
+
+  // ===== PRODUCTS =====
+  function filterAdminProducts() {
+    renderAdminProducts();
+  }
+
+  function renderAdminProducts() {
+    const search = (document.getElementById('productSearch')?.value || '').toLowerCase();
+    const status = document.getElementById('productStatusFilter')?.value || '';
+    
+    let filtered = allAdminProducts.filter(p => {
+      const matchSearch = !search || p.name.toLowerCase().includes(search);
+      const matchStatus = !status || 
+        (status === 'active' && p.is_active !== false) || 
+        (status === 'inactive' && p.is_active === false);
+      return matchSearch && matchStatus;
+    });
+
+    const grid = document.getElementById('adminProductGrid');
+    if (!grid) return;
+    
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
+        <div style="font-size:48px;margin-bottom:16px;">🔍</div>
+        <p>상품이 없습니다.</p>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="showTab('add-product')">첫 상품 등록하기</button>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(p => {
+      const stock = parseInt(p.stock || 0);
+      const stockBadge = stock === 0 ? `<span class="badge badge-danger">품절</span>` :
+                         stock <= 5 ? `<span class="badge badge-warning">재고 ${stock}</span>` :
+                         `<span class="badge badge-success">재고 ${stock}</span>`;
+      return `
+        <div class="product-admin-card">
+          <div class="product-admin-img">
+            ${p.thumbnail ? `<img src="${p.thumbnail}" alt="" onerror="this.style.display='none'">` : '🛍️'}
+            <div class="product-status-badge">
+              ${p.is_active === false ? '<span class="badge badge-secondary">숨김</span>' : ''}
+            </div>
+          </div>
+          <div class="product-admin-info">
+            <div class="product-admin-name">${p.name}</div>
+            <div class="product-admin-meta">
+              <span>${p.category || '미분류'}</span>
+              <span>${formatPrice(p.price)}</span>
+            </div>
+            <div style="margin-bottom:6px;">${stockBadge}</div>
+            <div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:4px;">
+              ${(()=>{
+                const colors = safeAdminParseArr(p.colors);
+                const sizes  = safeAdminParseArr(p.sizes);
+                let html = '';
+                if(colors.length>0) html += `<span style="font-size:11px;background:#f0fdfa;color:#0d9488;border:1px solid #99f6e4;border-radius:4px;padding:2px 6px;">🎨 ${colors.join(', ')}</span>`;
+                if(sizes.length>0)  html += `<span style="font-size:11px;background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe;border-radius:4px;padding:2px 6px;">📏 ${sizes.join(', ')}</span>`;
+                if(!colors.length && !sizes.length) html += `<span style="font-size:11px;color:var(--text-light);">옵션 없음</span>`;
+                return html;
+              })()}
+            </div>
+            <div class="product-admin-actions">
+              <button class="btn btn-sm btn-outline" onclick="editProduct('${p.id}')">✏️ 수정</button>
+              <button class="btn btn-sm btn-secondary" onclick="quickEditStock('${p.id}')">📦 재고</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ===== PRODUCT FORM =====
+  function resetProductForm() {
+    editingProductId = null;
+    colorTags = [];
+    sizeTags  = [];
+    extraTags = [];
+    document.getElementById('productFormTitle').textContent = '➕ 상품 등록';
+    document.getElementById('productForm').reset();
+    document.getElementById('editProductId').value = '';
+    document.getElementById('pThumbnail').value = '';
+    document.getElementById('pThumbnailUrl').value = '';
+    document.getElementById('pIsActive').checked = true;
+    document.getElementById('pExpiryDate').value = '';
+    document.getElementById('thumbPreview').classList.remove('visible');
+    document.getElementById('imgFileName').textContent = '';
+    document.getElementById('imgUploadZone').innerHTML =
+      `<div class="upload-icon">🖼️</div>
+       <p><strong>클릭</strong>하거나 JPG 이미지를 드래그하세요</p>
+       <small>JPG 파일만 허용 (최대 5MB)</small>`;
+    renderTags('color');
+    renderTags('size');
+    renderTags('extra');
+    document.getElementById('optionStockGrid').style.display = 'none';
+    document.getElementById('totalStockDisplay').textContent = '0';
+  }
+
+  function editProduct(id) {
+    const p = allAdminProducts.find(p => p.id === id);
+    if (!p) return;
+    
+    editingProductId = id;
+    showTab('add-product');
+    
+    document.getElementById('productFormTitle').textContent = '✏️ 상품 수정';
+    document.getElementById('editProductId').value = id;
+    document.getElementById('pName').value = p.name || '';
+    document.getElementById('pCategory').value = p.category || '';
+    document.getElementById('pPrice').value = p.price || '';
+    document.getElementById('pDescription').value = p.description || '';
+    document.getElementById('pThumbnail').value = p.thumbnail || '';
+    document.getElementById('pStock').value = p.stock || 0;
+    document.getElementById('pIsActive').checked = p.is_active !== false;
+    document.getElementById('pExpiryDate').value = p.expiry_date || '';
+
+    // 이미지 미리보기 복원
+    if (p.thumbnail) {
+      const img = document.getElementById('thumbPreview');
+      img.src = p.thumbnail;
+      img.classList.add('visible');
+      const zone = document.getElementById('imgUploadZone');
+      zone.innerHTML = `<div class="upload-icon">🖼️</div><p style="color:var(--success);font-weight:700;">이미지 등록됨</p><small>클릭하면 변경 가능</small>`;
+      if (!p.thumbnail.startsWith('data:')) {
+        document.getElementById('pThumbnailUrl').value = p.thumbnail;
+      }
+    }
+    
+    colorTags = safeAdminParseArr(p.colors);
+    sizeTags  = safeAdminParseArr(p.sizes);
+    extraTags = safeAdminParseArr(p.extra_options);
+
+    renderTags('color');
+    renderTags('size');
+    renderTags('extra');
+    updateTotalStock(p.stock || 0);
+  }
+
+  /* ===== 이미지 업로드 (파일 → base64) ===== */
+  function onImgFileChange(e) {
+    const file = e.target.files[0];
+    if (file) processImgFile(file);
+  }
+  function onImgDragOver(e) {
+    e.preventDefault();
+    document.getElementById('imgUploadZone').classList.add('drag-over');
+  }
+  function onImgDragLeave(e) {
+    document.getElementById('imgUploadZone').classList.remove('drag-over');
+  }
+  function onImgDrop(e) {
+    e.preventDefault();
+    document.getElementById('imgUploadZone').classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && isJpgFile(file)) processImgFile(file);
+    else toast('JPG 파일만 업로드 가능합니다.', 'warning');
+  }
+  function isJpgFile(file) {
+    // MIME 타입 또는 확장자로 JPG 여부 확인
+    const mimeOk = file.type === 'image/jpeg';
+    const extOk  = /\.(jpg|jpeg)$/i.test(file.name);
+    return mimeOk || extOk;
+  }
+  function processImgFile(file) {
+    if (!isJpgFile(file)) {
+      toast('JPG 파일만 업로드 가능합니다.', 'error'); return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast('파일 크기는 5MB 이하여야 합니다.', 'error'); return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const base64 = ev.target.result;
+      document.getElementById('pThumbnail').value = base64;
+      document.getElementById('pThumbnailUrl').value = '';
+      const img = document.getElementById('thumbPreview');
+      img.src = base64;
+      img.classList.add('visible');
+      document.getElementById('imgFileName').textContent = `✅ ${file.name} (${(file.size/1024).toFixed(0)}KB)`;
+      // 드롭존 텍스트 업데이트
+      document.getElementById('imgUploadZone').innerHTML =
+        `<div class="upload-icon">🖼️</div><p style="color:var(--success);font-weight:700;">이미지 업로드 완료</p><small>다시 클릭하면 변경 가능</small>`;
+    };
+    reader.readAsDataURL(file);
+  }
+  function previewThumbUrl(url) {
+    if (!url) return;
+    document.getElementById('pThumbnail').value = url;
+    const img = document.getElementById('thumbPreview');
+    img.src = url;
+    img.classList.add('visible');
+    img.onerror = () => img.classList.remove('visible');
+    document.getElementById('imgFileName').textContent = '';
+  }
+
+  function focusColorInput() { document.getElementById('colorInput').focus(); }
+  function focusSizeInput()  { document.getElementById('sizeInput').focus(); }
+  function focusExtraInput() { document.getElementById('extraInput').focus(); }
+
+  /* 안전한 배열 파싱 (admin용) */
+  function safeAdminParseArr(val) {
+    if (!val) return [];
+    if (Array.isArray(val)) return val.filter(v => v !== null && String(v).trim() !== '');
+    if (typeof val === 'string') {
+      const t = val.trim();
+      if (!t || t === '[]') return [];
+      try {
+        const p = JSON.parse(t);
+        return Array.isArray(p) ? p.filter(v => String(v).trim() !== '') : [];
+      } catch { return t.split(',').map(s=>s.trim()).filter(Boolean); }
+    }
+    return [];
+  }
+
+  function getTagArr(type) {
+    if (type === 'color') return colorTags;
+    if (type === 'size')  return sizeTags;
+    return extraTags;
+  }
+  function setTagArr(type, arr) {
+    if (type === 'color')      colorTags = arr;
+    else if (type === 'size') sizeTags  = arr;
+    else                      extraTags = arr;
+  }
+
+  function addTag(event, type) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const input = document.getElementById(`${type}Input`);
+    const value = input.value.trim();
+    if (!value) return;
+    const arr = getTagArr(type);
+    if (!arr.includes(value)) { arr.push(value); setTagArr(type, arr); }
+    input.value = '';
+    renderTags(type);
+    if (type !== 'extra') updateStockGrid();
+  }
+
+  function renderTags(type) {
+    const containerId = type === 'color' ? 'colorTagContainer'
+                      : type === 'size'  ? 'sizeTagContainer'
+                      : 'extraTagContainer';
+    const inputId = type === 'color' ? 'colorInput'
+                  : type === 'size'  ? 'sizeInput'
+                  : 'extraInput';
+    const tags = getTagArr(type);
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const input = document.getElementById(inputId);
+    container.innerHTML = '';
+    tags.forEach(tag => {
+      const span = document.createElement('span');
+      span.className = 'tag';
+      span.textContent = tag + ' ';
+      const btn = document.createElement('button');
+      btn.textContent = '×';
+      btn.type = 'button';
+      btn.onclick = () => removeTag(type, tag);
+      span.appendChild(btn);
+      container.appendChild(span);
+    });
+    container.appendChild(input);
+  }
+
+  function removeTag(type, value) {
+    const arr = getTagArr(type).filter(t => t !== value);
+    setTagArr(type, arr);
+    renderTags(type);
+    if (type !== 'extra') updateStockGrid();
+  }
+
+  function updateStockGrid() {
+    const grid = document.getElementById('stockGrid');
+    const container = document.getElementById('optionStockGrid');
+    
+    if (colorTags.length === 0 && sizeTags.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+    container.style.display = 'block';
+    
+    let html = '';
+    if (colorTags.length > 0 && sizeTags.length > 0) {
+      colorTags.forEach(c => {
+        sizeTags.forEach(s => {
+          html += `
+            <div class="stock-cell">
+              <div class="stock-cell-label">${c} / ${s}</div>
+              <input type="number" min="0" value="0" id="stock_${c}_${s}" 
+                     onchange="calcTotalFromOptions()">
+            </div>`;
+        });
+      });
+    } else if (colorTags.length > 0) {
+      colorTags.forEach(c => {
+        html += `
+          <div class="stock-cell">
+            <div class="stock-cell-label">${c}</div>
+            <input type="number" min="0" value="0" id="stock_${c}_" 
+                   onchange="calcTotalFromOptions()">
+          </div>`;
+      });
+    } else {
+      sizeTags.forEach(s => {
+        html += `
+          <div class="stock-cell">
+            <div class="stock-cell-label">${s}</div>
+            <input type="number" min="0" value="0" id="stock__${s}" 
+                   onchange="calcTotalFromOptions()">
+          </div>`;
+      });
+    }
+    grid.innerHTML = html;
+  }
+
+  function calcTotalFromOptions() {
+    const inputs = document.querySelectorAll('#stockGrid input');
+    let total = 0;
+    inputs.forEach(i => { total += parseInt(i.value || 0); });
+    document.getElementById('pStock').value = total;
+    document.getElementById('totalStockDisplay').textContent = total;
+  }
+
+  function updateTotalStock(val) {
+    document.getElementById('totalStockDisplay').textContent = val || 0;
+  }
+
+  async function saveProduct(e) {
+    e.preventDefault();
+    const editId = document.getElementById('editProductId').value;
+    
+    // Build option stock data
+    const stockByOption = {};
+    const inputs = document.querySelectorAll('#stockGrid input');
+    inputs.forEach(input => {
+      if (input.id.startsWith('stock_')) {
+        const parts = input.id.replace('stock_', '').split('_');
+        stockByOption[input.id.replace('stock_','')] = parseInt(input.value || 0);
+      }
+    });
+
+    const data = {
+      name: document.getElementById('pName').value.trim(),
+      category: document.getElementById('pCategory').value.trim(),
+      price: parseInt(document.getElementById('pPrice').value) || 0,
+      description: document.getElementById('pDescription').value.trim(),
+      thumbnail: document.getElementById('pThumbnail').value.trim(),
+      colors: colorTags,
+      sizes: sizeTags,
+      extra_options: extraTags,
+      stock: parseInt(document.getElementById('pStock').value) || 0,
+      stock_by_option: JSON.stringify(stockByOption),
+      is_active: document.getElementById('pIsActive').checked,
+      expiry_date: document.getElementById('pExpiryDate').value.trim() || ''
+    };
+
+    showLoading();
+    try {
+      if (editId) {
+        await API.patch('products', editId, data);
+        toast('상품이 수정되었습니다. ✅', 'success');
+      } else {
+        data.id = 'prod_' + generateId();
+        await API.create('products', data);
+        toast('상품이 등록되었습니다! 🎉', 'success');
+      }
+      await loadProducts();
+      renderDashboard(); // 재고 부족 위젯 갱신
+      resetProductForm();
+      showTab('products');
+    } catch (err) {
+      console.error(err);
+      toast('저장 중 오류가 발생했습니다.', 'error');
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function deleteProduct(id) {
+    const p = allAdminProducts.find(p => p.id === id);
+    if (!confirm(`"${p.name}" 상품을 삭제하시겠습니까?`)) return;
+    showLoading();
+    try {
+      await API.delete('products', id);
+      await loadProducts();
+      renderAdminProducts();
+      toast('상품이 삭제되었습니다.', 'default');
+    } catch(e) {
+      toast('삭제 실패', 'error');
+    } finally { hideLoading(); }
+  }
+
+  // ===== QUICK STOCK EDIT =====
+  function quickEditStock(id) {
+    const p = allAdminProducts.find(p => p.id === id);
+    if (!p) return;
+    editingStockProductId = id;
+    
+    document.getElementById('stockModalContent').innerHTML = `
+      <div style="margin-bottom:16px;">
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px;">${p.name}</div>
+        <div style="font-size:13px;color:var(--text-muted);">현재 재고: ${p.stock || 0}개</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">재고 수량</label>
+        <input type="number" class="form-control" id="quickStockInput" value="${p.stock || 0}" min="0" style="max-width:200px;">
+      </div>
+    `;
+    openModal('stockModal');
+  }
+
+  async function saveStock() {
+    const val = parseInt(document.getElementById('quickStockInput').value) || 0;
+    showLoading();
+    try {
+      await API.patch('products', editingStockProductId, { stock: val });
+      await loadProducts();
+      renderAdminProducts();
+      renderDashboard(); // 재고 부족 위젯 갱신
+      closeModal('stockModal');
+      toast('재고가 업데이트되었습니다. ✅', 'success');
+    } catch(e) {
+      toast('저장 실패', 'error');
+    } finally { hideLoading(); }
+  }
+
+  // ===== ORDERS =====
+  let currentOrderFilter = '';
+
+  function filterOrderStatus(status) {
+    currentOrderFilter = status;
+    document.getElementById('orderStatusFilter').value = status;
+    renderAdminOrders();
+  }
+
+  function filterAdminOrders() {
+    renderAdminOrders();
+  }
+
+  function renderAdminOrders() {
+    const search = (document.getElementById('orderSearch')?.value || '').toLowerCase();
+    const status = document.getElementById('orderStatusFilter')?.value || currentOrderFilter || '';
+    
+    let filtered = allOrders.filter(o => {
+      const matchSearch = !search || 
+        (o.order_number || '').toLowerCase().includes(search) ||
+        (o.shipping_name || '').toLowerCase().includes(search) ||
+        (o.shipping_phone || '').includes(search);
+      const matchStatus = !status || o.payment_status === status;
+      return matchSearch && matchStatus;
+    });
+
+    const container = document.getElementById('ordersTableContainer');
+    if (!container) return;
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div style="text-align:center;padding:60px;color:var(--text-muted);">
+        <div style="font-size:48px;margin-bottom:16px;">📭</div>
+        <p>주문이 없습니다.</p>
+      </div>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>주문번호</th>
+            <th>주문자</th>
+            <th>상품</th>
+            <th>금액</th>
+            <th>상태</th>
+            <th>주문일시</th>
+            <th>처리</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filtered.map(o => {
+            const items = JSON.parse(o.items || '[]');
+            const itemSummary = items.length > 0 ? 
+              `${items[0].product_name}${items.length > 1 ? ` 외 ${items.length-1}건` : ''}` : '-';
+            return `
+              <tr class="order-row" onclick="viewOrder('${o.id}')">
+                <td><span style="font-family:monospace;font-size:13px;color:var(--primary);">${o.order_number}</span></td>
+                <td>${o.shipping_name}<br><span style="font-size:12px;color:var(--text-muted);">${o.shipping_phone || ''}</span></td>
+                <td style="max-width:180px;"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;">${itemSummary}</div></td>
+                <td><strong>${formatPrice(o.final_price)}</strong></td>
+                <td onclick="event.stopPropagation()">
+                  <select class="status-select" onchange="updateOrderStatus('${o.id}', this.value)">
+                    <option value="pending" ${o.payment_status==='pending'?'selected':''}>결제 대기</option>
+                    <option value="transfer_confirmed" ${o.payment_status==='transfer_confirmed'?'selected':''}>입금완료(고객)</option>
+                    <option value="payment_confirmed" ${o.payment_status==='payment_confirmed'?'selected':''}>결제 확인</option>
+                    <option value="shipped" ${o.payment_status==='shipped'?'selected':''}>배송 중</option>
+                    <option value="delivered" ${o.payment_status==='delivered'?'selected':''}>배송 완료</option>
+                    <option value="cancelled" ${o.payment_status==='cancelled'?'selected':''}>취소</option>
+                  </select>
+                </td>
+                <td style="font-size:12px;color:var(--text-muted);">${formatDate(o.created_at)}</td>
+                <td onclick="event.stopPropagation()">
+                  <button class="btn btn-sm btn-outline" onclick="viewOrder('${o.id}')">상세</button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  async function updateOrderStatus(orderId, status) {
+    try {
+      const order = allOrders.find(o => o.id === orderId);
+      const prevStatus = order?.payment_status;
+
+      const updateData = { payment_status: status };
+      if (status === 'payment_confirmed') updateData.admin_confirmed_at = Date.now();
+      await API.patch('orders', orderId, updateData);
+      if (order) order.payment_status = status;
+
+      // ── 취소 시 재고 복구 ──
+      // 이전 상태가 cancelled가 아니었다가 지금 cancelled로 바뀌는 경우에만 복구
+      if (status === 'cancelled' && prevStatus !== 'cancelled' && order) {
+        await restoreStock(order);
+      }
+
+      renderDashboard(); // 입금 대기 카운트 등 즉시 갱신
+      toast(`주문 상태가 "${PAYMENT_STATUS[status]?.label || status}"로 변경되었습니다.`, 'success');
+    } catch(e) {
+      console.error(e);
+      toast('상태 변경 실패', 'error');
+    }
+  }
+
+  // 취소된 주문의 재고를 원복
+  async function restoreStock(order) {
+    let items = [];
+    try { items = JSON.parse(order.items || '[]'); } catch {}
+    if (items.length === 0) return;
+
+    // product_id 별 복구 수량 합산
+    const qtyMap = {};
+    const sboMap = {};
+    items.forEach(i => {
+      qtyMap[i.product_id] = (qtyMap[i.product_id] || 0) + i.quantity;
+      if (!sboMap[i.product_id]) sboMap[i.product_id] = {};
+      const cellKey = `${i.selected_color||''}_${i.selected_size||''}`;
+      sboMap[i.product_id][cellKey] = (sboMap[i.product_id][cellKey] || 0) + i.quantity;
+    });
+
+    for (const productId of Object.keys(qtyMap)) {
+      try {
+        const prod = await API.getOne('products', productId);
+        const newStock = (parseInt(prod.stock) || 0) + qtyMap[productId];
+
+        let sbo = {};
+        try { sbo = JSON.parse(prod.stock_by_option || '{}'); } catch {}
+        Object.entries(sboMap[productId] || {}).forEach(([cellKey, qty]) => {
+          if (sbo[cellKey] !== undefined) sbo[cellKey] = (parseInt(sbo[cellKey]) || 0) + qty;
+        });
+
+        await API.patch('products', productId, {
+          stock: newStock,
+          stock_by_option: JSON.stringify(sbo)
+        });
+        // 로컬 캐시도 갱신
+        const localProd = allAdminProducts.find(p => p.id === productId);
+        if (localProd) localProd.stock = newStock;
+      } catch (err) {
+        console.warn('재고 복구 실패:', productId, err);
+      }
+    }
+  }
+
+  function viewOrder(orderId) {
+    const order = allOrders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const items = JSON.parse(order.items || '[]');
+    
+    document.getElementById('orderDetailContent').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);">주문번호</div>
+          <div style="font-weight:700;color:var(--primary);font-family:monospace;">${order.order_number}</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);">주문일시</div>
+          <div style="font-weight:600;">${formatDate(order.created_at)}</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);">상태</div>
+          <div>${statusBadge(order.payment_status)}</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);">결제방법</div>
+          <div style="font-weight:600;">${order.payment_method === 'bank_transfer' ? '🏦 계좌이체' : '💳 카드'}</div>
+        </div>
+      </div>
+      
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px;">
+        <div style="font-weight:700;margin-bottom:12px;">🏠 배송지</div>
+        <div style="font-size:14px;line-height:2;">
+          <strong>${order.shipping_name}</strong> · ${order.shipping_phone}<br>
+          ${order.shipping_address}
+          ${order.note ? `<br><span style="color:var(--text-muted);">메모: ${order.note}</span>` : ''}
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-weight:700;margin-bottom:12px;">📦 주문 상품</div>
+        ${items.map(item => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-weight:600;font-size:14px;">${item.product_name}</div>
+              <div style="font-size:12px;color:var(--text-muted);">
+                ${item.selected_color ? `색상: ${item.selected_color} / ` : ''}
+                ${item.selected_size ? `사이즈: ${item.selected_size} / ` : ''}
+                수량: ${item.quantity}개
+              </div>
+            </div>
+            <div style="font-weight:700;color:var(--primary);">${formatPrice(item.subtotal)}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="background:var(--primary-light);border-radius:var(--radius-sm);padding:16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:14px;">
+          <span>상품금액</span><span>${formatPrice(order.total_price)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:14px;">
+          <span>배송비</span><span>${order.shipping_fee === 0 ? '무료' : formatPrice(order.shipping_fee)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:800;color:var(--primary);border-top:1px solid #c7d2fe;padding-top:10px;margin-top:6px;">
+          <span>최종 금액</span><span>${formatPrice(order.final_price)}</span>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        ${order.payment_status === 'transfer_confirmed' ? `
+          <button class="btn btn-success" onclick="updateOrderStatus('${order.id}','payment_confirmed');closeModal('orderDetailModal');loadOrders().then(renderAdminOrders);">
+            ✅ 결제 확인 처리
+          </button>
+        ` : ''}
+        ${order.payment_status === 'payment_confirmed' ? `
+          <button class="btn btn-primary" onclick="updateOrderStatus('${order.id}','shipped');closeModal('orderDetailModal');loadOrders().then(renderAdminOrders);">
+            🚚 배송 시작
+          </button>
+        ` : ''}
+        <select class="form-control" style="max-width:180px;" onchange="updateOrderStatus('${order.id}',this.value)">
+          <option value="">상태 변경...</option>
+          <option value="pending">결제 대기</option>
+          <option value="transfer_confirmed">입금완료(고객)</option>
+          <option value="payment_confirmed">결제 확인</option>
+          <option value="shipped">배송 중</option>
+          <option value="delivered">배송 완료</option>
+          <option value="cancelled">취소</option>
+        </select>
+      </div>
+    `;
+    
+    openModal('orderDetailModal');
+  }
+
+  // ===== SETTINGS =====
+  async function saveSettings() {
+    const updates = [
+      { key: 'shop_name', value: document.getElementById('settingShopName').value },
+      { key: 'shop_description', value: document.getElementById('settingShopDesc').value },
+      { key: 'shipping_fee_standard', value: document.getElementById('settingShippingFee').value },
+      { key: 'shipping_fee_free_threshold', value: document.getElementById('settingFreeThreshold').value },
+      { key: 'bank_account_bank', value: document.getElementById('settingBankName').value },
+      { key: 'bank_account_number', value: document.getElementById('settingBankNumber').value },
+      { key: 'bank_account_holder', value: document.getElementById('settingBankHolder').value },
+    ];
+
+    showLoading();
+    try {
+      for (const update of updates) {
+        if (allSettings[update.key]) {
+          await API.patch('settings', allSettings[update.key].id, { value: update.value });
+        } else {
+          await API.create('settings', { id: generateId(), key: update.key, value: update.value, description: update.key });
+        }
+      }
+      await loadSettings();
+      Settings._cache = null;
+      hideLoading();
+      toast('설정이 저장되었습니다! ✅', 'success');
+    } catch(e) {
+      hideLoading();
+      toast('저장 실패', 'error');
+    }
+  }
+
+  // ===== MEMBERS =====
+  function renderMembers() {
+    const container = document.getElementById('membersTableContainer');
+    if (!container) return;
+    
+    if (allMembers.length === 0) {
+      container.innerHTML = `<div style="text-align:center;padding:60px;color:var(--text-muted);">
+        <div style="font-size:48px;margin-bottom:16px;">👥</div>
+        <p>회원이 없습니다.</p>
+      </div>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>닉네임</th>
+            <th>이름</th>
+            <th>전화번호</th>
+            <th>이메일</th>
+            <th>주소</th>
+            <th>가입일</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${allMembers.map(m => `
+            <tr>
+              <td><strong>${m.nickname}</strong></td>
+              <td>${m.name}</td>
+              <td>${m.phone || '-'}</td>
+              <td>${m.email || '-'}</td>
+              <td style="font-size:12px;">${m.address || '-'}</td>
+              <td style="font-size:12px;color:var(--text-muted);">${formatDate(m.created_at)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  // ===== EXCEL EXPORT =====
+  function exportExcel() {
+    if (allOrders.length === 0) {
+      toast('내보낼 주문 데이터가 없습니다.', 'warning');
+      return;
+    }
+
+    const rows = [];
+    
+    // Header
+    rows.push([
+      '주문번호', '주문일시', '주문자(회원)', '수령인', '연락처', '배송주소',
+      '상품명', '색상', '사이즈', '수량', '상품금액', '배송비', '최종금액',
+      '결제방법', '결제상태', '배송메모', '고객입금확인시각', '관리자확인시각'
+    ]);
+
+    allOrders.forEach(order => {
+      let items = [];
+      try { items = JSON.parse(order.items || '[]'); } catch {}
+      
+      if (items.length === 0) {
+        rows.push([
+          order.order_number, formatDate(order.created_at),
+          order.user_name, order.shipping_name, order.shipping_phone, order.shipping_address,
+          '-', '-', '-', '-',
+          order.total_price, order.shipping_fee, order.final_price,
+          order.payment_method === 'bank_transfer' ? '계좌이체' : '카드',
+          PAYMENT_STATUS[order.payment_status]?.label || order.payment_status,
+          order.note || '',
+          order.transfer_confirmed_at ? formatDate(order.transfer_confirmed_at) : '',
+          order.admin_confirmed_at ? formatDate(order.admin_confirmed_at) : ''
+        ]);
+      } else {
+        items.forEach((item, idx) => {
+          rows.push([
+            idx === 0 ? order.order_number : '',
+            idx === 0 ? formatDate(order.created_at) : '',
+            idx === 0 ? (order.user_name || '') : '',
+            idx === 0 ? order.shipping_name : '',
+            idx === 0 ? order.shipping_phone : '',
+            idx === 0 ? order.shipping_address : '',
+            item.product_name, item.selected_color || '-', item.selected_size || '-',
+            item.quantity, item.product_price, 
+            idx === 0 ? order.shipping_fee : '',
+            idx === 0 ? order.final_price : '',
+            idx === 0 ? (order.payment_method === 'bank_transfer' ? '계좌이체' : '카드') : '',
+            idx === 0 ? (PAYMENT_STATUS[order.payment_status]?.label || order.payment_status) : '',
+            idx === 0 ? (order.note || '') : '',
+            idx === 0 ? (order.transfer_confirmed_at ? formatDate(order.transfer_confirmed_at) : '') : '',
+            idx === 0 ? (order.admin_confirmed_at ? formatDate(order.admin_confirmed_at) : '') : ''
+          ]);
+        });
+      }
+    });
+
+    // Convert to CSV with BOM for Korean encoding
+    const bom = '\uFEFF';
+    const csv = bom + rows.map(row => 
+      row.map(cell => {
+        const str = String(cell || '');
+        return str.includes(',') || str.includes('\n') || str.includes('"') 
+          ? `"${str.replace(/"/g, '""')}"` 
+          : str;
+      }).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `주문내역_${new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace('.','')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    toast('📊 엑셀(CSV) 파일이 다운로드되었습니다!', 'success');
+  }
+
+  async function refreshAll() {
+    toast('데이터를 새로고침 중...', 'default', 2000);
+    await loadAll();
+    const activeTab = document.querySelector('.admin-tab.active');
+    if (activeTab) {
+      const tabId = activeTab.id.replace('tab-', '');
+      if (tabId === 'orders') renderAdminOrders();
+      if (tabId === 'members') renderMembers();
+    }
+    toast('새로고침 완료! ✅', 'success');
+  }
+
+  // ===== 색상·사이즈 빠른 추가 버튼 =====
+  function quickAddColor(val) {
+    if (!colorTags.includes(val)) { colorTags.push(val); renderTags('color'); updateStockGrid(); }
+    else toast(`"${val}"은 이미 추가되어 있습니다.`, 'warning');
+  }
+  function quickAddSize(val) {
+    if (!sizeTags.includes(val)) { sizeTags.push(val); renderTags('size'); updateStockGrid(); }
+    else toast(`"${val}"은 이미 추가되어 있습니다.`, 'warning');
+  }
+
+  // ===== 회사정보 로드 =====
+  const COMPANY_KEYS = [
+    'company_name','company_owner','company_biz_num','company_mail_order',
+    'company_address','company_phone','company_email','company_hours',
+    'company_insta','company_kakao','company_notice'
+  ];
+  const COMPANY_INPUTS = {
+    company_name:       'companyName',
+    company_owner:      'companyOwner',
+    company_biz_num:    'companyBizNum',
+    company_mail_order: 'companyMailOrder',
+    company_address:    'companyAddress',
+    company_phone:      'companyPhone',
+    company_email:      'companyEmail',
+    company_hours:      'companyHours',
+    company_insta:      'companyInsta',
+    company_kakao:      'companyKakao',
+    company_notice:     'companyNotice',
+  };
+
+  async function loadCompanyInfo() {
+    // allSettings는 이미 loadSettings()에서 로드되어 있음
+    COMPANY_KEYS.forEach(key => {
+      const inputId = COMPANY_INPUTS[key];
+      const el = document.getElementById(inputId);
+      if (el && allSettings[key]) el.value = allSettings[key].value || '';
+    });
+  }
+
+  async function saveCompanyInfo() {
+    const updates = COMPANY_KEYS.map(key => ({
+      key,
+      value: document.getElementById(COMPANY_INPUTS[key])?.value || ''
+    }));
+
+    showLoading();
+    try {
+      for (const u of updates) {
+        if (allSettings[u.key]) {
+          await API.patch('settings', allSettings[u.key].id, { value: u.value });
+          allSettings[u.key].value = u.value;
+        } else {
+          const created = await API.create('settings', {
+            id: generateId(), key: u.key, value: u.value, description: u.key
+          });
+          allSettings[u.key] = { id: created.id, value: u.value };
+        }
+      }
+      Settings._cache = null;
+      toast('회사 정보가 저장되었습니다! ✅', 'success');
+    } catch(e) {
+      console.error(e);
+      toast('저장 중 오류가 발생했습니다.', 'error');
+    } finally { hideLoading(); }
+  }
+
+  /* ===== 관리자 비밀번호 변경 ===== */
+  document.addEventListener('input', function(e) {
+    if (e.target.id === 'adminNewPw' || e.target.id === 'adminNewPw2') {
+      const p1 = document.getElementById('adminNewPw').value;
+      const p2 = document.getElementById('adminNewPw2').value;
+      const hint = document.getElementById('pwMatchHint');
+      if (!hint) return;
+      if (!p2) { hint.textContent = ''; return; }
+      if (p1 === p2) {
+        hint.textContent = '✅ 비밀번호가 일치합니다';
+        hint.style.color = '#16a34a';
+      } else {
+        hint.textContent = '❌ 비밀번호가 일치하지 않습니다';
+        hint.style.color = '#ef4444';
+      }
+    }
+  });
+
+  async function changeAdminPw() {
+    const currentPw = document.getElementById('adminCurrentPw').value;
+    const newPw     = document.getElementById('adminNewPw').value;
+    const newPw2    = document.getElementById('adminNewPw2').value;
+
+    if (!currentPw) { toast('현재 비밀번호를 입력해주세요.', 'warning'); return; }
+    if (!newPw || newPw.length < 4) { toast('새 비밀번호는 4자 이상이어야 합니다.', 'warning'); return; }
+    if (newPw !== newPw2) { toast('새 비밀번호가 일치하지 않습니다.', 'error'); return; }
+
+    const user = Auth.getUser();
+    if (!user || !user.id) { toast('로그인 정보를 찾을 수 없습니다.', 'error'); return; }
+
+    showLoading();
+    try {
+      const r = await API.get('users', { limit: 200 });
+      const adminUser = (r.data || []).find(u => u.id === user.id);
+      if (!adminUser) { toast('관리자 계정을 찾을 수 없습니다.', 'error'); return; }
+
+      if (adminUser.password !== hashPassword(currentPw)) {
+        toast('현재 비밀번호가 올바르지 않습니다.', 'error');
+        return;
+      }
+
+      await API.patch('users', adminUser.id, { password: hashPassword(newPw) });
+
+      document.getElementById('adminCurrentPw').value = '';
+      document.getElementById('adminNewPw').value = '';
+      document.getElementById('adminNewPw2').value = '';
+      document.getElementById('pwMatchHint').textContent = '';
+
+      toast('✅ 비밀번호가 성공적으로 변경되었습니다!', 'success');
+    } catch(e) {
+      console.error(e);
+      toast('비밀번호 변경 중 오류가 발생했습니다.', 'error');
+    } finally { hideLoading(); }
+  }
+
+  /* ===== 택배 빠른 다운로드 ===== */
+  let quickDeliveryOrderList = [];
+
+  async function loadQuickDeliveryOrders() {
+    const area = document.getElementById('quickDeliveryOrders');
+    area.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">🔄 로딩 중...</div>';
+    try {
+      const r = await API.get('orders', { limit: 500 });
+      quickDeliveryOrderList = (r.data || []).filter(o =>
+        ['payment_confirmed', 'transfer_confirmed', 'shipped'].includes(o.payment_status)
+      );
+
+      if (!quickDeliveryOrderList.length) {
+        area.innerHTML = '<p style="color:var(--text-muted);font-size:14px;padding:12px 0;">결제 완료된 주문이 없습니다.</p>';
+        return;
+      }
+
+      const statusLabel = { payment_confirmed: '결제완료', transfer_confirmed: '입금확인', shipped: '배송중' };
+      let html = `
+        <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span style="font-size:13px;color:var(--text-muted);">총 ${quickDeliveryOrderList.length}건</span>
+          <button class="btn btn-sm btn-secondary" onclick="quickSelectAll(true)">☑️ 전체 선택</button>
+          <button class="btn btn-sm btn-secondary" onclick="quickSelectAll(false)">⬜ 전체 해제</button>
+        </div>
+        <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:#f0fdfa;">
+              <th style="padding:8px;border:1px solid var(--border);"><input type="checkbox" id="quickChkAll" onchange="quickSelectAll(this.checked)"></th>
+              <th style="padding:8px;border:1px solid var(--border);">주문번호</th>
+              <th style="padding:8px;border:1px solid var(--border);">수령인</th>
+              <th style="padding:8px;border:1px solid var(--border);">연락처</th>
+              <th style="padding:8px;border:1px solid var(--border);">주소</th>
+              <th style="padding:8px;border:1px solid var(--border);">상태</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      quickDeliveryOrderList.forEach(o => {
+        const status = statusLabel[o.payment_status] || o.payment_status;
+        html += `<tr>
+          <td style="padding:8px;border:1px solid var(--border);text-align:center;"><input type="checkbox" class="quick-chk" value="${o.id}" checked></td>
+          <td style="padding:8px;border:1px solid var(--border);font-weight:600;">${escHtml(o.order_number || o.id.substring(0,8))}</td>
+          <td style="padding:8px;border:1px solid var(--border);">${escHtml(o.shipping_name || o.user_name || '-')}</td>
+          <td style="padding:8px;border:1px solid var(--border);">${escHtml(o.shipping_phone || o.user_phone || '-')}</td>
+          <td style="padding:8px;border:1px solid var(--border);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(o.shipping_address || o.user_address || '-')}</td>
+          <td style="padding:8px;border:1px solid var(--border);color:#0d9488;font-weight:600;">${status}</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table></div>';
+      area.innerHTML = html;
+    } catch(e) {
+      area.innerHTML = `<p style="color:var(--error);font-size:14px;">오류: ${e.message}</p>`;
+    }
+  }
+
+  function quickSelectAll(checked) {
+    document.querySelectorAll('.quick-chk').forEach(c => c.checked = checked);
+    const chkAll = document.getElementById('quickChkAll');
+    if (chkAll) chkAll.checked = checked;
+  }
+
+  function quickDeliveryDownload() {
+    const checked = [...document.querySelectorAll('.quick-chk:checked')].map(c => c.value);
+    if (!checked.length) { toast('주문을 선택해주세요.', 'warning'); return; }
+
+    const courier = document.getElementById('quickCourierSelect').value;
+    const boxType = document.getElementById('quickBoxSelect').value;
+    const selected = quickDeliveryOrderList.filter(o => checked.includes(o.id));
+
+    const COURIER_NAMES = {
+      cj_normal: 'CJ대한통운(일반)', cj_bulk: 'CJ대한통운(대량)',
+      hanjin_normal: '한진택배(일반)', hanjin_bulk: '한진택배(대량)',
+      lotte_normal: '롯데택배(일반)', lotte_bulk: '롯데택배(대량)',
+      today_bulk: '오늘픽업(대량)'
+    };
+
+    // SheetJS 필요 - delivery-upload.html에서 처리하도록 데이터를 localStorage에 저장
+    // 여기서는 CSV로 대체 다운로드
+    const header = ['순번', '이름', '핸드폰번호', '연락처', '우편번호', '주소', '상세주소', '박스타입', '상품명', '수량', '메모'];
+    const rows = [header];
+
+    selected.forEach((o, i) => {
+      let items = [];
+      try { items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []); } catch(e) {}
+      const productSummary = items.map(it => it.name || '').filter(Boolean).join(', ').substring(0, 30);
+      const totalQty = items.reduce((s, it) => s + (it.quantity || 1), 0);
+      const addr = o.shipping_address || o.user_address || '';
+      let mainAddr = addr, detailAddr = '';
+      const commaIdx = addr.lastIndexOf(',');
+      if (commaIdx > 0) { mainAddr = addr.substring(0, commaIdx).trim(); detailAddr = addr.substring(commaIdx + 1).trim(); }
+
+      rows.push([
+        i + 1,
+        o.shipping_name || o.user_name || '',
+        o.shipping_phone || o.user_phone || '',
+        '',
+        o.user_zipcode || '',
+        mainAddr,
+        detailAddr.substring(0, 30),
+        boxType,
+        productSummary,
+        totalQty,
+        o.note || ''
+      ]);
+    });
+
+    // CSV 다운로드 (SheetJS 없는 경우 fallback)
+    if (typeof XLSX !== 'undefined') {
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [
+        {wch:6},{wch:12},{wch:16},{wch:14},{wch:10},{wch:35},{wch:20},{wch:8},{wch:25},{wch:6},{wch:20}
+      ];
+      XLSX.utils.book_append_sheet(wb, ws, '배송목록');
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+      XLSX.writeFile(wb, `택배업로드_${COURIER_NAMES[courier]}_${dateStr}.xlsx`);
+      toast(`✅ 엑셀 다운로드 완료 (${selected.length}건)`, 'success');
+    } else {
+      // CSV fallback
+      const csvContent = '\uFEFF' + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+      a.href = url;
+      a.download = `택배업로드_${COURIER_NAMES[courier]}_${dateStr}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast(`✅ CSV 다운로드 완료 (${selected.length}건)`, 'success');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

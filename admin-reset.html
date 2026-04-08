@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 비밀번호 재설정</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(145deg, #f0fdfa, #ccfbf1);
+      padding: 20px;
+    }
+    .box {
+      background: white;
+      border-radius: 20px;
+      padding: 48px 40px;
+      width: 100%; max-width: 460px;
+      box-shadow: 0 12px 40px rgba(13,148,136,0.15);
+    }
+    .icon { font-size: 52px; text-align: center; margin-bottom: 8px; }
+    h1 { text-align: center; font-size: 22px; font-weight: 800; color: #0f766e; margin-bottom: 6px; }
+    .sub { text-align: center; color: #64748b; font-size: 13px; margin-bottom: 32px; }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    input {
+      width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0;
+      border-radius: 10px; font-size: 14px; font-family: inherit;
+      outline: none; transition: border-color 0.2s;
+    }
+    input:focus { border-color: #0d9488; }
+    .btn {
+      width: 100%; padding: 13px; background: #0d9488; color: white;
+      border: none; border-radius: 10px; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit; margin-top: 8px;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #0f766e; }
+    .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+    .result {
+      margin-top: 20px; padding: 14px 16px;
+      border-radius: 10px; font-size: 14px; font-weight: 600;
+      display: none;
+    }
+    .result.success { background: #f0fdf4; color: #166534; border: 1.5px solid #86efac; }
+    .result.error { background: #fef2f2; color: #991b1b; border: 1.5px solid #fca5a5; }
+    .info-box {
+      background: #f0fdfa; border: 1.5px solid #99f6e4;
+      border-radius: 10px; padding: 14px 16px; margin-bottom: 24px;
+      font-size: 13px; color: #0f766e; line-height: 1.6;
+    }
+    .info-box strong { display: block; margin-bottom: 4px; font-weight: 700; }
+    .back-link {
+      display: block; text-align: center; margin-top: 20px;
+      color: #64748b; font-size: 13px; text-decoration: none;
+    }
+    .back-link:hover { color: #0d9488; }
+    .divider { margin: 20px 0; border: none; border-top: 1px solid #e2e8f0; }
+    .list-admins { margin-top: 16px; }
+    .admin-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; background: #f8fafc; border-radius: 8px;
+      margin-bottom: 8px; font-size: 13px;
+    }
+    .admin-nick { font-weight: 700; color: #0f766e; }
+    .admin-id { color: #94a3b8; font-size: 11px; }
+    .btn-sm {
+      padding: 6px 12px; font-size: 12px; font-weight: 600;
+      background: #ef4444; color: white; border: none; border-radius: 6px;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-sm:hover { background: #dc2626; }
+    .btn-sm.mint { background: #0d9488; }
+    .btn-sm.mint:hover { background: #0f766e; }
+  </style>
+</head>
+<body>
+<div class="box">
+  <div class="icon">🔑</div>
+  <h1>관리자 비밀번호 재설정</h1>
+  <p class="sub">관리자 계정의 비밀번호를 새로 설정합니다</p>
+
+  <div class="info-box">
+    <strong>📌 사용 방법</strong>
+    관리자 닉네임(기본: <b>admin</b>)과 새로 사용할 비밀번호를 입력하고<br>
+    [비밀번호 재설정] 버튼을 클릭하세요.<br><br>
+    완료 후 <b>로그인 페이지</b>에서 새 비밀번호로 로그인하세요.
+  </div>
+
+  <form onsubmit="resetAdminPw(); return false;">
+  <div class="field">
+    <label>관리자 닉네임</label>
+    <input type="text" id="adminNick" value="admin" placeholder="관리자 닉네임 입력" autocomplete="username">
+  </div>
+  <div class="field">
+    <label>새 비밀번호</label>
+    <input type="password" id="newPw" placeholder="새 비밀번호 입력 (4자 이상)" autocomplete="new-password">
+  </div>
+  <div class="field">
+    <label>새 비밀번호 확인</label>
+    <input type="password" id="newPw2" placeholder="비밀번호 다시 입력" autocomplete="new-password">
+  </div>
+
+  <button type="submit" class="btn" id="resetBtn">🔐 비밀번호 재설정</button>
+  </form>
+
+  <div class="result" id="result"></div>
+
+  <hr class="divider">
+
+  <div>
+    <button class="btn" style="background:#1e293b; margin-bottom:0;" onclick="loadAdmins()">👑 현재 관리자 계정 목록 조회</button>
+    <div class="list-admins" id="adminList"></div>
+  </div>
+
+  <hr class="divider">
+
+  <div>
+    <button class="btn" style="background:#7c3aed; margin-bottom:0;" onclick="createNewAdmin()">➕ 새 관리자 계정 만들기</button>
+    <div id="createResult" style="margin-top:12px;"></div>
+  </div>
+
+  <a href="login.html" class="back-link">← 로그인 페이지로 돌아가기</a>
+</div>
+
+<script>
+  function hashPassword(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+      h = ((h << 5) - h) + str.charCodeAt(i);
+      h |= 0;
+    }
+    return Math.abs(h).toString(16);
+  }
+
+  function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+  }
+
+  function showResult(msg, type) {
+    const el = document.getElementById('result');
+    el.textContent = msg;
+    el.className = `result ${type}`;
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function resetAdminPw() {
+    const nick = document.getElementById('adminNick').value.trim();
+    const pw1  = document.getElementById('newPw').value;
+    const pw2  = document.getElementById('newPw2').value;
+
+    if (!nick) { showResult('❌ 닉네임을 입력해주세요.', 'error'); return; }
+    if (!pw1 || pw1.length < 4) { showResult('❌ 비밀번호는 4자 이상 입력해주세요.', 'error'); return; }
+    if (pw1 !== pw2) { showResult('❌ 비밀번호가 일치하지 않습니다.', 'error'); return; }
+
+    const btn = document.getElementById('resetBtn');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+
+    try {
+      const r = await fetch('tables/users?limit=200');
+      const data = await r.json();
+      const users = data.data || [];
+
+      let adminUser = users.find(u => u.role === 'admin' && u.nickname === nick);
+
+      if (!adminUser) {
+        // 닉네임이 다를 수 있으므로 admin role인 첫 번째 계정 찾기
+        adminUser = users.find(u => u.role === 'admin');
+      }
+
+      if (!adminUser) {
+        // 관리자 계정이 없으면 새로 생성
+        const newAdmin = await fetch('tables/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: 'admin_' + generateId(),
+            nickname: nick,
+            name: '관리자',
+            email: 'admin@shop.com',
+            password: hashPassword(pw1),
+            phone: '010-0000-0000',
+            zipcode: '00000',
+            address: '관리자주소',
+            address_detail: '',
+            privacy_agreed: true,
+            role: 'admin'
+          })
+        });
+        if (newAdmin.ok) {
+          showResult(`✅ 관리자 계정이 생성되었습니다!\n닉네임: ${nick} / 비밀번호: 입력하신 비밀번호`, 'success');
+        } else {
+          showResult('❌ 계정 생성에 실패했습니다.', 'error');
+        }
+        return;
+      }
+
+      // 기존 관리자 비밀번호 업데이트
+      const patchRes = await fetch(`tables/users/${adminUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nickname: nick,
+          password: hashPassword(pw1)
+        })
+      });
+
+      if (patchRes.ok) {
+        showResult(`✅ 비밀번호가 성공적으로 변경되었습니다!\n\n닉네임: ${nick}\n새 비밀번호로 로그인하세요.`, 'success');
+        document.getElementById('newPw').value = '';
+        document.getElementById('newPw2').value = '';
+      } else {
+        showResult('❌ 비밀번호 변경에 실패했습니다. 잠시 후 다시 시도해주세요.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showResult('❌ 오류가 발생했습니다: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔐 비밀번호 재설정';
+    }
+  }
+
+  async function loadAdmins() {
+    const listEl = document.getElementById('adminList');
+    listEl.innerHTML = '<p style="text-align:center;color:#94a3b8;font-size:13px;padding:12px;">로딩 중...</p>';
+    try {
+      const r = await fetch('tables/users?limit=200');
+      const data = await r.json();
+      const admins = (data.data || []).filter(u => u.role === 'admin');
+      if (!admins.length) {
+        listEl.innerHTML = '<p style="text-align:center;color:#94a3b8;font-size:13px;padding:12px;">관리자 계정이 없습니다.</p>';
+        return;
+      }
+      listEl.innerHTML = admins.map(a => `
+        <div class="admin-item">
+          <div>
+            <div class="admin-nick">👑 ${a.nickname}</div>
+            <div class="admin-id">ID: ${a.id}</div>
+            <div style="font-size:12px;color:#64748b;">${a.email || ''} | ${a.phone || ''}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-sm mint" onclick="fillNick('${a.nickname}')">선택</button>
+            <button class="btn-sm" onclick="deleteAdmin('${a.id}','${a.nickname}')">삭제</button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      listEl.innerHTML = '<p style="color:#ef4444;font-size:13px;padding:12px;">오류: ' + err.message + '</p>';
+    }
+  }
+
+  function fillNick(nick) {
+    document.getElementById('adminNick').value = nick;
+    document.getElementById('newPw').focus();
+  }
+
+  async function deleteAdmin(id, nick) {
+    if (!confirm(`관리자 계정 "${nick}"을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+    try {
+      const r = await fetch(`tables/users/${id}`, { method: 'DELETE' });
+      if (r.ok) {
+        alert('삭제되었습니다.');
+        loadAdmins();
+      } else {
+        alert('삭제 실패');
+      }
+    } catch (err) {
+      alert('오류: ' + err.message);
+    }
+  }
+
+  async function createNewAdmin() {
+    const nick = prompt('새 관리자 닉네임을 입력하세요:', 'admin');
+    if (!nick) return;
+    const pw = prompt('새 관리자 비밀번호를 입력하세요 (4자 이상):');
+    if (!pw || pw.length < 4) { alert('비밀번호는 4자 이상이어야 합니다.'); return; }
+
+    try {
+      const res = await fetch('tables/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: 'admin_' + generateId(),
+          nickname: nick,
+          name: '관리자',
+          email: 'admin@shop.com',
+          password: hashPassword(pw),
+          phone: '010-0000-0000',
+          zipcode: '00000',
+          address: '관리자주소',
+          address_detail: '',
+          privacy_agreed: true,
+          role: 'admin'
+        })
+      });
+      if (res.ok) {
+        const crEl = document.getElementById('createResult');
+        crEl.innerHTML = `<div class="result success" style="display:block;">✅ 새 관리자 계정이 생성되었습니다!<br>닉네임: <b>${nick}</b></div>`;
+        loadAdmins();
+      } else {
+        alert('계정 생성 실패');
+      }
+    } catch (err) {
+      alert('오류: ' + err.message);
+    }
+  }
+
+  // 페이지 로드 시 닉네임 필드 포커스
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('newPw').focus();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>택배 업로드 양식 - 관리자</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: #f8fafc; }
+    .page-wrap { max-width: 1400px; margin: 0 auto; padding: 28px 16px 60px; }
+
+    /* ── 헤더 ── */
+    .page-header {
+      background: linear-gradient(135deg, #0f766e, #0d9488);
+      border-radius: 16px; padding: 26px 32px; margin-bottom: 24px; color: white;
+    }
+    .page-header h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .page-header p  { font-size: 13px; opacity: .85; margin: 0; }
+
+    /* ── 택배사 카드 ── */
+    .courier-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px; margin-bottom: 20px;
+    }
+    .courier-card {
+      border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px 10px;
+      cursor: pointer; transition: all .2s; text-align: center; background: white;
+    }
+    .courier-card:hover { border-color: #0d9488; background: #f0fdfa; }
+    .courier-card.selected { border-color: #0d9488; background: #f0fdfa; box-shadow: 0 0 0 3px rgba(13,148,136,.15); }
+    .courier-card .icon { font-size: 24px; margin-bottom: 4px; }
+    .courier-card .name { font-size: 12px; font-weight: 700; color: #1e293b; }
+    .courier-card .type { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+    /* ── 카드 ── */
+    .card {
+      background: white; border-radius: 12px;
+      border: 1px solid #e2e8f0; padding: 20px;
+      margin-bottom: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.04);
+    }
+    .card-title {
+      font-size: 14px; font-weight: 700; color: #0f766e;
+      margin-bottom: 14px; display: flex; align-items: center; gap: 6px;
+    }
+
+    /* ── 박스 표 ── */
+    .box-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .box-table th { background: #f0fdfa; color: #0f766e; font-weight: 700; padding: 8px 10px; text-align: center; border: 1px solid #e2e8f0; }
+    .box-table td { padding: 7px 10px; border: 1px solid #e2e8f0; text-align: center; color: #374151; }
+    .box-tag { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .box-available { background: #dcfce7; color: #166534; }
+    .box-na { background: #f1f5f9; color: #94a3b8; }
+
+    /* ── 탭 ── */
+    .tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 2px solid #e2e8f0; }
+    .tab-btn {
+      padding: 9px 16px; font-size: 13px; font-weight: 600;
+      border: none; background: none; cursor: pointer; font-family: inherit;
+      color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s;
+    }
+    .tab-btn.active { color: #0d9488; border-bottom-color: #0d9488; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── 버튼 ── */
+    .btn { padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; font-family: inherit; transition: all .2s; }
+    .btn-primary   { background: #0d9488; color: white; }
+    .btn-primary:hover { background: #0f766e; }
+    .btn-secondary { background: #f1f5f9; color: #374151; border: 1.5px solid #e2e8f0; }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-green  { background: #16a34a; color: white; }
+    .btn-green:hover  { background: #15803d; }
+    .btn-blue   { background: #2563eb; color: white; }
+    .btn-blue:hover   { background: #1d4ed8; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .btn-sm { padding: 5px 11px; font-size: 11px; }
+
+    /* ── 알림 박스 ── */
+    .notice {
+      background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 9px;
+      padding: 11px 14px; font-size: 12px; color: #1e40af; margin-bottom: 14px; line-height: 1.7;
+    }
+    .notice strong { display: block; margin-bottom: 2px; }
+    .import-box {
+      background: #fffbeb; border: 1.5px solid #fde68a;
+      border-radius: 9px; padding: 11px 14px; margin-bottom: 14px; font-size: 12px; color: #92400e;
+    }
+
+    /* ══════════════════════════════════════
+       입력 행 테이블 스타일 (핵심 변경 부분)
+    ══════════════════════════════════════ */
+
+    /* 스크롤 래퍼 */
+    .row-table-wrap { overflow-x: auto; width: 100%; }
+
+    /* 행 테이블 */
+    .row-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 900px; }
+
+    /* 헤더 */
+    .row-table thead th {
+      background: #f0fdfa; color: #0f766e; font-weight: 700;
+      padding: 8px 6px; text-align: center; border: 1px solid #e2e8f0;
+      white-space: nowrap; font-size: 11px;
+    }
+    .row-table thead th .req { color: #ef4444; }
+
+    /* 셀 */
+    .row-table tbody td {
+      padding: 4px 4px; border: 1px solid #e2e8f0; vertical-align: middle;
+    }
+    .row-table tbody td.no-cell {
+      text-align: center; font-size: 11px; font-weight: 700; color: #94a3b8;
+      background: #fafafa; width: 34px;
+    }
+
+    /* 인풋 공통 */
+    .row-table input[type="text"],
+    .row-table input[type="tel"],
+    .row-table select {
+      width: 100%; padding: 6px 7px; border: 1.5px solid #e2e8f0;
+      border-radius: 6px; font-size: 12px; font-family: inherit;
+      outline: none; transition: border-color .2s; background: white;
+    }
+    .row-table input:focus,
+    .row-table select:focus { border-color: #0d9488; background: #f0fdfa; }
+
+    /* 열 너비 */
+    .col-no    { width: 34px; }
+    .col-name  { width: 90px; }
+    .col-phone { width: 130px; }
+    .col-zip   { width: 90px; }          /* ★ 우편번호 독립 열 */
+    .col-addr  { min-width: 200px; }     /* ★ 주소(도로명) 독립 열 */
+    .col-addr2 { min-width: 150px; }     /* ★ 상세주소 독립 열 */
+    .col-box   { width: 70px; }
+    .col-addrBtn { width: 68px; }
+    .col-del   { width: 34px; }
+
+    /* 카카오 주소 버튼 */
+    .addr-search-btn {
+      width: 100%; padding: 6px 4px; font-size: 11px; font-weight: 700;
+      background: #fef3c7; color: #92400e; border: 1.5px solid #fde68a;
+      border-radius: 6px; cursor: pointer; white-space: nowrap; font-family: inherit;
+    }
+    .addr-search-btn:hover { background: #fde68a; }
+
+    /* 삭제 버튼 */
+    .del-btn {
+      width: 28px; height: 28px; border: 1.5px solid #fca5a5;
+      background: #fef2f2; color: #ef4444; border-radius: 6px;
+      cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
+      margin: 0 auto;
+    }
+    .del-btn:hover { background: #fee2e2; }
+
+    /* ── 미리보기 테이블 ── */
+    .preview-table-wrap { overflow-x: auto; margin-top: 12px; }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
+    .preview-table th { background: #0f766e; color: white; padding: 7px 9px; border: 1px solid #0d9488; font-weight: 600; }
+    .preview-table td { padding: 6px 9px; border: 1px solid #e2e8f0; color: #374151; }
+    .preview-table tr:nth-child(even) td { background: #f8fafc; }
+
+    /* ── 토스트 ── */
+    .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    .toast {
+      background: #1e293b; color: white; padding: 11px 16px; border-radius: 9px;
+      margin-bottom: 8px; font-size: 13px; font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0,0,0,.2); display: flex; gap: 8px; align-items: center;
+    }
+    .toast.success { background: #166534; }
+    .toast.error   { background: #991b1b; }
+
+    .loading-row { text-align: center; padding: 20px; color: #94a3b8; font-size: 13px; }
+
+    /* 필드 */
+    .field label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+    .field input, .field select {
+      width: 100%; padding: 8px 11px; border: 1.5px solid #e2e8f0;
+      border-radius: 8px; font-size: 13px; font-family: inherit; outline: none;
+    }
+    .field input:focus, .field select:focus { border-color: #0d9488; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media(max-width:640px){ .form-grid { grid-template-columns: 1fr; } .courier-grid { grid-template-columns: repeat(2,1fr); } }
+
+    /* 인라인 수정 입력 (가져오기 테이블) */
+    .edit-input {
+      width: 100%; border: 1px solid #e2e8f0; border-radius: 4px;
+      padding: 3px 5px; font-size: 11px; font-family: inherit; outline: none;
+    }
+    .edit-input:focus { border-color: #0d9488; }
+  </style>
+</head>
+<body>
+<div class="toast-container" id="toastContainer"></div>
+<div id="headerPlaceholder"></div>
+
+<div class="page-wrap">
+
+  <!-- 페이지 헤더 -->
+  <div class="page-header">
+    <h1>📦 택배 업로드 양식</h1>
+    <p>우편번호 · 주소 · 상세주소를 각각 입력하고 택배사별 엑셀 양식을 다운로드하세요</p>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('manual')">✏️ 직접 입력</button>
+    <button class="tab-btn" onclick="switchTab('import')">📋 주문에서 가져오기</button>
+    <button class="tab-btn" onclick="switchTab('guide')">📖 이용 안내</button>
+  </div>
+
+  <!-- ═══════════════ 탭1: 직접 입력 ═══════════════ -->
+  <div id="tab-manual" class="tab-content active">
+
+    <!-- 택배사 선택 -->
+    <div class="card">
+      <div class="card-title">🚚 택배사 선택</div>
+      <div class="courier-grid" id="courierGrid">
+        <div class="courier-card selected" data-courier="cj_normal" onclick="selectCourier(this)">
+          <div class="icon">🟡</div><div class="name">CJ대한통운</div><div class="type">일반</div>
+        </div>
+        <div class="courier-card" data-courier="cj_bulk" onclick="selectCourier(this)">
+          <div class="icon">🟡</div><div class="name">CJ대한통운</div><div class="type">대량</div>
+        </div>
+        <div class="courier-card" data-courier="hanjin_normal" onclick="selectCourier(this)">
+          <div class="icon">🔵</div><div class="name">한진택배</div><div class="type">일반</div>
+        </div>
+        <div class="courier-card" data-courier="hanjin_bulk" onclick="selectCourier(this)">
+          <div class="icon">🔵</div><div class="name">한진택배</div><div class="type">대량</div>
+        </div>
+        <div class="courier-card" data-courier="hanjin_large" onclick="selectCourier(this)">
+          <div class="icon">🔵</div><div class="name">한진택배</div><div class="type">대량(10↑)</div>
+        </div>
+        <div class="courier-card" data-courier="lotte_normal" onclick="selectCourier(this)">
+          <div class="icon">🔴</div><div class="name">롯데택배</div><div class="type">일반</div>
+        </div>
+        <div class="courier-card" data-courier="lotte_bulk" onclick="selectCourier(this)">
+          <div class="icon">🔴</div><div class="name">롯데택배</div><div class="type">대량</div>
+        </div>
+        <div class="courier-card" data-courier="today_bulk" onclick="selectCourier(this)">
+          <div class="icon">🟢</div><div class="name">오늘픽업</div><div class="type">대량</div>
+        </div>
+      </div>
+
+      <!-- 박스타입 표 -->
+      <div class="card-title" style="margin-top:4px;">📦 박스 타입 및 규격</div>
+      <div style="overflow-x:auto;">
+        <table class="box-table">
+          <thead>
+            <tr>
+              <th>박스타입</th><th>규격</th>
+              <th>CJ일반</th><th>CJ대량</th>
+              <th>한진일반</th><th>한진대량</th><th>한진대량(10↑)</th>
+              <th>롯데일반</th><th>롯데대량</th><th>오늘픽업</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><b>X</b></td><td>500g/60cm</td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td>
+            </tr>
+            <tr><td><b>S</b></td><td>2kg/60cm</td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-na">-</span></td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-available">✓</span></td>
+            </tr>
+            <tr><td><b>A</b></td><td>5kg/80cm</td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-available">✓</span></td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-available">✓</span></td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-na">-</span></td>
+            </tr>
+            <tr><td><b>B</b></td><td>10kg/100cm</td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-available">✓</span></td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-na">-</span></td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-na">-</span></td>
+            </tr>
+            <tr><td><b>C</b></td><td>15kg/120cm</td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-available">✓</span></td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-na">-</span></td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-na">-</span></td>
+            </tr>
+            <tr><td><b>D</b></td><td>20kg/140cm</td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td>
+            </tr>
+            <tr><td><b>E</b></td><td>20kg/160cm</td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-available">✓</span></td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td>
+            </tr>
+            <tr><td><b>F</b></td><td>25kg/190cm</td>
+              <td><span class="box-tag box-available">✓</span></td><td><span class="box-tag box-na">-</span></td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td>
+              <td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td><td><span class="box-tag box-na">-</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ★★★ 수신자 정보 입력 - 우편번호/주소/상세주소 분리 ★★★ -->
+    <div class="card">
+      <div class="card-title">📝 배송 정보 입력</div>
+
+      <div class="notice">
+        <strong>💡 입력 형식 안내</strong>
+        • <b>우편번호</b>: 🔍 주소검색 버튼 클릭 → 카카오 우편번호 서비스에서 자동 입력 (직접 입력도 가능)<br>
+        • <b>주소(도로명)</b>: 카카오 주소검색 시 자동 입력 / 직접 입력 가능 (시·군·구 포함 전체 도로명주소)<br>
+        • <b>상세주소</b>: 동·호수, 건물명 등 (30자 이내) — 직접 입력<br>
+        • <b>핸드폰</b>: 010-1111-2222 형식 (입력 시 자동 하이픈)<br>
+        • <b>이름</b>: 한글 10자 / 영문 20자 이내
+      </div>
+
+      <!-- ★ 행 테이블 헤더 -->
+      <div class="row-table-wrap">
+        <table class="row-table">
+          <thead>
+            <tr>
+              <th class="col-no">No.</th>
+              <th class="col-name">이름 <span class="req">*</span></th>
+              <th class="col-phone">핸드폰 <span class="req">*</span></th>
+              <th class="col-addrBtn">주소검색</th>
+              <th class="col-zip">우편번호 <span class="req">*</span></th>
+              <th class="col-addr">주소(도로명) <span class="req">*</span></th>
+              <th class="col-addr2">상세주소 <span class="req">*</span></th>
+              <th class="col-box">박스 <span class="req">*</span></th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="orderRows">
+            <!-- 행이 JS로 추가됨 -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="btn btn-secondary" onclick="addRow()">➕ 행 추가</button>
+        <button class="btn btn-secondary" onclick="addRows5()">➕ 5행 추가</button>
+        <button class="btn btn-secondary" onclick="clearRows()">🗑️ 전체 초기화</button>
+      </div>
+    </div>
+
+    <!-- 추가 정보 -->
+    <div class="card">
+      <div class="card-title">⚙️ 추가 정보 (선택)</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>발신자(출고지) 이름</label>
+          <input type="text" id="senderName" placeholder="발신자 이름">
+        </div>
+        <div class="field">
+          <label>발신자 연락처</label>
+          <input type="text" id="senderPhone" placeholder="010-0000-0000">
+        </div>
+        <div class="field">
+          <label>발신자 주소</label>
+          <input type="text" id="senderAddr" placeholder="출고지 주소">
+        </div>
+        <div class="field">
+          <label>배송 메모 (기본값)</label>
+          <input type="text" id="defaultNote" placeholder="예: 문 앞에 놔주세요">
+        </div>
+      </div>
+    </div>
+
+    <!-- 다운로드 -->
+    <div class="card">
+      <div class="card-title">💾 엑셀 다운로드</div>
+      <p style="font-size:13px;color:#64748b;margin-bottom:14px;">선택한 택배사 양식으로 엑셀 파일이 생성됩니다. 빈 행은 자동 제외됩니다.</p>
+      <div class="btn-row">
+        <button class="btn btn-green"      onclick="downloadExcel()">📥 엑셀 다운로드</button>
+        <button class="btn btn-blue"       onclick="previewData()">👁️ 미리보기</button>
+        <button class="btn btn-secondary"  onclick="downloadTemplate()">📄 빈 양식 다운로드</button>
+      </div>
+      <div id="previewArea" style="display:none;margin-top:18px;">
+        <div class="card-title" style="margin-bottom:8px;">👁️ 데이터 미리보기</div>
+        <div class="preview-table-wrap" id="previewTableWrap"></div>
+      </div>
+    </div>
+  </div><!-- /tab-manual -->
+
+  <!-- ═══════════════ 탭2: 주문에서 가져오기 ═══════════════ -->
+  <div id="tab-import" class="tab-content">
+    <div class="card">
+      <div class="card-title">📋 결제 완료 주문 불러오기</div>
+
+      <div class="import-box">
+        ⚠️ <b>결제 확인된 주문</b>만 불러옵니다.
+        주문 상태가 <b>결제완료</b>·<b>입금확인</b>·<b>배송중</b>인 주문을 선택하세요.<br>
+        가져온 후 우편번호·주소·상세주소를 <b>각 셀에서 직접 수정</b>할 수 있습니다.
+      </div>
+
+      <div class="btn-row" style="margin-bottom:14px;">
+        <button class="btn btn-primary"   onclick="loadOrders()">🔄 주문 목록 불러오기</button>
+        <button class="btn btn-secondary" onclick="selectAllOrders()">☑️ 전체 선택</button>
+        <button class="btn btn-secondary" onclick="deselectAllOrders()">⬜ 전체 해제</button>
+        <button class="btn btn-green"     onclick="importSelectedOrders()">📦 선택한 주문 가져오기</button>
+      </div>
+
+      <!-- import용 택배사 선택 -->
+      <div style="margin-bottom:14px;">
+        <label style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px;display:block;">택배사 선택</label>
+        <div class="courier-grid" id="importCourierGrid">
+          <div class="courier-card selected" data-courier="cj_normal" onclick="selectImportCourier(this)">
+            <div class="icon">🟡</div><div class="name">CJ대한통운</div><div class="type">일반</div>
+          </div>
+          <div class="courier-card" data-courier="cj_bulk" onclick="selectImportCourier(this)">
+            <div class="icon">🟡</div><div class="name">CJ대한통운</div><div class="type">대량</div>
+          </div>
+          <div class="courier-card" data-courier="hanjin_normal" onclick="selectImportCourier(this)">
+            <div class="icon">🔵</div><div class="name">한진택배</div><div class="type">일반</div>
+          </div>
+          <div class="courier-card" data-courier="hanjin_bulk" onclick="selectImportCourier(this)">
+            <div class="icon">🔵</div><div class="name">한진택배</div><div class="type">대량</div>
+          </div>
+          <div class="courier-card" data-courier="lotte_normal" onclick="selectImportCourier(this)">
+            <div class="icon">🔴</div><div class="name">롯데택배</div><div class="type">일반</div>
+          </div>
+          <div class="courier-card" data-courier="lotte_bulk" onclick="selectImportCourier(this)">
+            <div class="icon">🔴</div><div class="name">롯데택배</div><div class="type">대량</div>
+          </div>
+          <div class="courier-card" data-courier="today_bulk" onclick="selectImportCourier(this)">
+            <div class="icon">🟢</div><div class="name">오늘픽업</div><div class="type">대량</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 기본 박스 -->
+      <div class="field" style="max-width:180px;margin-bottom:14px;">
+        <label>기본 박스타입 <span style="color:#ef4444">*</span></label>
+        <select id="importDefaultBox">
+          <option value="A">A (5kg/80cm)</option>
+          <option value="S">S (2kg/60cm)</option>
+          <option value="B">B (10kg/100cm)</option>
+          <option value="C">C (15kg/120cm)</option>
+          <option value="D">D (20kg/140cm)</option>
+          <option value="E">E (20kg/160cm)</option>
+          <option value="F">F (25kg/190cm)</option>
+        </select>
+      </div>
+
+      <div id="orderListArea">
+        <div class="loading-row">주문 목록을 불러오려면 위 버튼을 클릭하세요</div>
+      </div>
+    </div>
+
+    <!-- 가져온 주문 미리보기 & 수정 -->
+    <div class="card" id="importedDataCard" style="display:none;">
+      <div class="card-title">📦 가져온 배송 데이터 (직접 수정 가능)</div>
+
+      <!-- ★★★ 가져오기 테이블도 우편번호/주소/상세주소 분리 ★★★ -->
+      <div class="row-table-wrap">
+        <table class="row-table">
+          <thead>
+            <tr>
+              <th class="col-no">No.</th>
+              <th class="col-name">이름</th>
+              <th class="col-phone">핸드폰</th>
+              <th class="col-addrBtn">주소검색</th>
+              <th class="col-zip">우편번호</th>
+              <th class="col-addr">주소(도로명)</th>
+              <th class="col-addr2">상세주소</th>
+              <th class="col-box">박스</th>
+              <th style="min-width:140px;">상품명</th>
+              <th class="col-del">수량</th>
+            </tr>
+          </thead>
+          <tbody id="importedRows"></tbody>
+        </table>
+      </div>
+      <p style="margin-top:8px;font-size:12px;color:#64748b;" id="importedCount"></p>
+
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn btn-green"     onclick="downloadImportedExcel()">📥 엑셀 다운로드</button>
+        <button class="btn btn-secondary" onclick="clearImported()">🗑️ 초기화</button>
+      </div>
+    </div>
+  </div><!-- /tab-import -->
+
+  <!-- ═══════════════ 탭3: 이용 안내 ═══════════════ -->
+  <div id="tab-guide" class="tab-content">
+    <div class="card">
+      <div class="card-title">📖 택배 업로드 이용 안내</div>
+      <div style="font-size:13px;line-height:1.9;color:#374151;">
+        <h3 style="font-size:14px;font-weight:700;color:#0f766e;margin-bottom:8px;">✏️ 직접 입력 방법</h3>
+        <ol style="padding-left:18px;margin-bottom:18px;">
+          <li>원하는 <b>택배사</b>를 선택합니다</li>
+          <li>각 행에 이름 · 핸드폰 · 우편번호 · 주소(도로명) · 상세주소 · 박스타입을 입력합니다</li>
+          <li><b>🔍 주소검색</b> 버튼을 클릭하면 카카오 우편번호 서비스가 열려 우편번호·도로명주소가 자동 입력됩니다</li>
+          <li><b>[엑셀 다운로드]</b> 버튼으로 해당 택배사 양식 파일을 생성합니다</li>
+        </ol>
+        <h3 style="font-size:14px;font-weight:700;color:#0f766e;margin-bottom:8px;">📋 주문에서 가져오기</h3>
+        <ol style="padding-left:18px;margin-bottom:18px;">
+          <li><b>[주문에서 가져오기]</b> 탭 선택</li>
+          <li><b>[주문 목록 불러오기]</b> 클릭 → 결제완료 주문 조회</li>
+          <li>배송할 주문을 체크하고 택배사와 박스타입을 선택</li>
+          <li><b>[선택한 주문 가져오기]</b> 클릭 → 우편번호·주소·상세주소 각 셀 확인·수정</li>
+          <li><b>[엑셀 다운로드]</b> 클릭</li>
+        </ol>
+        <h3 style="font-size:14px;font-weight:700;color:#0f766e;margin-bottom:8px;">📦 박스타입 설명</h3>
+        <table class="box-table" style="margin-bottom:18px;">
+          <thead><tr><th>코드</th><th>최대 중량</th><th>박스 규격</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td>X</td><td>500g</td><td>60cm 이하</td><td>소형</td></tr>
+            <tr><td>S</td><td>2kg</td><td>60cm 이하</td><td>소형</td></tr>
+            <tr><td><b>A</b></td><td>5kg</td><td>80cm 이하</td><td><b>기본형 ★</b></td></tr>
+            <tr><td>B</td><td>10kg</td><td>100cm 이하</td><td>중형</td></tr>
+            <tr><td>C</td><td>15kg</td><td>120cm 이하</td><td>중대형</td></tr>
+            <tr><td>D</td><td>20kg</td><td>140cm 이하</td><td>대형</td></tr>
+            <tr><td>E</td><td>20kg</td><td>160cm 이하</td><td>대형(부피)</td></tr>
+            <tr><td>F</td><td>25kg</td><td>190cm 이하</td><td>특대형</td></tr>
+          </tbody>
+        </table>
+        <h3 style="font-size:14px;font-weight:700;color:#0f766e;margin-bottom:8px;">⚠️ 주의사항</h3>
+        <ul style="padding-left:18px;">
+          <li>핸드폰 번호는 <b>010-1111-2222</b> 형식 (입력 시 자동 변환)</li>
+          <li>우편번호 / 주소(도로명) / 상세주소는 반드시 <b>각각 별도 셀</b>에 입력</li>
+          <li>상세주소는 <b>30자 이내</b></li>
+          <li>이름은 한글 <b>10자</b> / 영문 <b>20자</b> 이내</li>
+          <li>엑셀 파일은 <b>배송목록</b>과 <b>박스타입안내</b> 2개 시트로 구성됩니다</li>
+        </ul>
+      </div>
+    </div>
+  </div><!-- /tab-guide -->
+
+</div><!-- /page-wrap -->
+
+<!-- 카카오 우편번호 API -->
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script src="js/utils.js"></script>
+<script>
+/* ═══════════════ 상수 ═══════════════ */
+const COURIER_NAMES = {
+  cj_normal:'CJ대한통운(일반)', cj_bulk:'CJ대한통운(대량)',
+  hanjin_normal:'한진택배(일반)', hanjin_bulk:'한진택배(대량)', hanjin_large:'한진택배(대량10↑)',
+  lotte_normal:'롯데택배(일반)', lotte_bulk:'롯데택배(대량)',
+  today_bulk:'오늘픽업(대량)'
+};
+const COURIER_BOX = {
+  cj_normal:    ['A','C','E','F'],
+  cj_bulk:      ['A','B','C','E'],
+  hanjin_normal:['S','A','D','E'],
+  hanjin_bulk:  ['S','A','B','C'],
+  hanjin_large: ['A'],
+  lotte_normal: ['S','A','D','E'],
+  lotte_bulk:   ['S','A','B','C'],
+  today_bulk:   ['S']
+};
+
+let selectedCourier       = 'cj_normal';
+let selectedImportCourier = 'cj_normal';
+let rowCount   = 0;
+let importedData = [];
+let allOrders    = [];
+
+/* ═══════════════ 탭 ═══════════════ */
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['manual','import','guide'][i] === tab);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const el = document.getElementById('tab-' + tab);
+  if (el) el.classList.add('active');
+}
+
+/* ═══════════════ 택배사 선택 ═══════════════ */
+function selectCourier(card) {
+  document.querySelectorAll('#courierGrid .courier-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedCourier = card.dataset.courier;
+  updateBoxSelects();
+}
+function selectImportCourier(card) {
+  document.querySelectorAll('#importCourierGrid .courier-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedImportCourier = card.dataset.courier;
+}
+function updateBoxSelects() {
+  const allowed = COURIER_BOX[selectedCourier] || [];
+  document.querySelectorAll('#orderRows .box-select').forEach(sel => {
+    const cur = sel.value;
+    sel.innerHTML = allowed.map(b => `<option value="${b}">${b}</option>`).join('');
+    if (allowed.includes(cur)) sel.value = cur;
+  });
+}
+
+/* ═══════════════ 카카오 주소 검색 ═══════════════ */
+function openAddrSearch(rowId, prefix) {
+  // prefix: 'r_' (직접입력) 또는 'i_' (가져오기)
+  new daum.Postcode({
+    oncomplete: function(data) {
+      const zip  = document.getElementById(prefix + rowId + '_zip');
+      const addr = document.getElementById(prefix + rowId + '_addr');
+      const addr2= document.getElementById(prefix + rowId + '_addr2');
+      if (zip)   zip.value   = data.zonecode;
+      if (addr)  addr.value  = data.roadAddress || data.jibunAddress;
+      if (addr2) { addr2.value = ''; addr2.focus(); }
+
+      // importedData 반영
+      if (prefix === 'i_') {
+        const idx = parseInt(rowId);
+        if (!isNaN(idx) && importedData[idx]) {
+          importedData[idx].zipcode = data.zonecode;
+          importedData[idx].address = data.roadAddress || data.jibunAddress;
+          importedData[idx].detail  = '';
+        }
+      }
+    }
+  }).open();
+}
+
+/* ═══════════════ 직접입력 행 관리 ═══════════════ */
+function addRow(data = {}) {
+  rowCount++;
+  const rId    = rowCount;
+  const allowed= COURIER_BOX[selectedCourier] || ['A'];
+  const boxOpts= allowed.map(b => `<option value="${b}"${data.boxType===b?' selected':''}>${b}</option>`).join('');
+
+  const tr = document.createElement('tr');
+  tr.id = 'row_' + rId;
+  tr.innerHTML = `
+    <td class="no-cell">${rId}</td>
+    <td><input type="text" id="r_${rId}_name"  placeholder="이름" value="${escH(data.name||'')}"    maxlength="20"></td>
+    <td><input type="tel"  id="r_${rId}_phone" placeholder="010-0000-0000" value="${escH(data.phone||'')}" oninput="fmtPhone(this)"></td>
+    <td><button class="addr-search-btn" onclick="openAddrSearch(${rId},'r_')">🔍 주소검색</button></td>
+    <td><input type="text" id="r_${rId}_zip"   placeholder="우편번호" value="${escH(data.zipcode||'')}" maxlength="10" style="text-align:center;"></td>
+    <td><input type="text" id="r_${rId}_addr"  placeholder="도로명주소 전체" value="${escH(data.address||'')}"></td>
+    <td><input type="text" id="r_${rId}_addr2" placeholder="상세주소 (30자이내)" value="${escH(data.detail||'')}" maxlength="30"></td>
+    <td><select class="box-select">${boxOpts}</select></td>
+    <td><button class="del-btn" onclick="delRow('row_${rId}')">✕</button></td>
+  `;
+  document.getElementById('orderRows').appendChild(tr);
+  return tr;
+}
+
+function addRows5() { for (let i = 0; i < 5; i++) addRow(); }
+
+function delRow(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function clearRows() {
+  if (!confirm('모든 입력 내용을 초기화하시겠습니까?')) return;
+  document.getElementById('orderRows').innerHTML = '';
+  rowCount = 0;
+}
+
+/* ═══════════════ 유틸 ═══════════════ */
+function escH(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtPhone(input) {
+  let v = input.value.replace(/\D/g,'');
+  if (v.length <= 3) input.value = v;
+  else if (v.length <= 7) input.value = v.slice(0,3)+'-'+v.slice(3);
+  else input.value = v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11);
+}
+
+/* ═══════════════ 데이터 수집 ═══════════════ */
+function collectRows() {
+  const trs  = document.querySelectorAll('#orderRows tr');
+  const data = [];
+  let num = 1;
+  trs.forEach(tr => {
+    const rId  = tr.id.replace('row_','');
+    const name  = (document.getElementById('r_'+rId+'_name')  || {}).value?.trim() || '';
+    const phone = (document.getElementById('r_'+rId+'_phone') || {}).value?.trim() || '';
+    const zip   = (document.getElementById('r_'+rId+'_zip')   || {}).value?.trim() || '';
+    const addr  = (document.getElementById('r_'+rId+'_addr')  || {}).value?.trim() || '';
+    const addr2 = (document.getElementById('r_'+rId+'_addr2') || {}).value?.trim() || '';
+    const sel   = tr.querySelector('.box-select');
+    const box   = sel ? sel.value : 'A';
+    if (!name && !phone && !addr) return; // 빈 행 건너뜀
+    data.push({ num, name, phone, zipcode: zip, address: addr, detail: addr2, boxType: box });
+    num++;
+  });
+  return data;
+}
+
+/* ═══════════════ 엑셀 생성 ═══════════════ */
+function buildSheetData(rows, sender) {
+  // ★ 우편번호·주소·상세주소 각각 독립 컬럼
+  const header = ['순번','이름','핸드폰번호','연락처','우편번호','주소(도로명)','상세주소','박스타입','상품명','수량','메모'];
+  const sheetRows = [header];
+  rows.forEach(r => {
+    sheetRows.push([
+      r.num,
+      r.name,
+      r.phone,
+      r.contact || '',
+      r.zipcode,          // ★ 우편번호 단독
+      r.address,          // ★ 도로명주소 단독
+      r.detail,           // ★ 상세주소 단독
+      r.boxType,
+      r.productName || '',
+      r.qty || '',
+      r.note || (sender?.note || '')
+    ]);
+  });
+  return sheetRows;
+}
+
+function downloadExcel() {
+  const rows = collectRows();
+  if (!rows.length) { showToast('입력된 데이터가 없습니다.','error'); return; }
+  const sender = {
+    name:  document.getElementById('senderName').value,
+    phone: document.getElementById('senderPhone').value,
+    addr:  document.getElementById('senderAddr').value,
+    note:  document.getElementById('defaultNote').value
+  };
+  exportToExcel(buildSheetData(rows, sender), selectedCourier, COURIER_NAMES[selectedCourier]);
+}
+
+function downloadTemplate() {
+  const header = [['순번','이름','핸드폰번호','연락처','우편번호','주소(도로명)','상세주소','박스타입','상품명','수량','메모']];
+  exportToExcel(header, selectedCourier, COURIER_NAMES[selectedCourier]+'_빈양식');
+}
+
+function exportToExcel(sheetData, courier, courierName) {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+  ws['!cols'] = [
+    {wch:6},{wch:12},{wch:16},{wch:14},
+    {wch:10},    // ★ 우편번호
+    {wch:38},    // ★ 도로명주소
+    {wch:22},    // ★ 상세주소
+    {wch:8},{wch:25},{wch:6},{wch:20}
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, '배송목록');
+
+  const infoData = [
+    ['박스타입 안내',''],['코드','규격 / 최대중량'],
+    ['X','60cm이하 / 500g'],['S','60cm이하 / 2kg'],['A','80cm이하 / 5kg (기본)'],
+    ['B','100cm이하 / 10kg'],['C','120cm이하 / 15kg'],
+    ['D','140cm이하 / 20kg'],['E','160cm이하 / 20kg'],['F','190cm이하 / 25kg'],[''],
+    [`선택 택배사: ${courierName}`,''],[`허용 박스: ${(COURIER_BOX[courier]||[]).join(', ')}`,'']
+  ];
+  const wsInfo = XLSX.utils.aoa_to_sheet(infoData);
+  wsInfo['!cols'] = [{wch:22},{wch:32}];
+  XLSX.utils.book_append_sheet(wb, wsInfo, '박스타입안내');
+
+  const today   = new Date();
+  const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `택배업로드_${courierName}_${dateStr}.xlsx`);
+  showToast(`✅ 다운로드 완료! (${sheetData.length-1}건)`,'success');
+}
+
+/* ═══════════════ 미리보기 ═══════════════ */
+function previewData() {
+  const rows = collectRows();
+  const area = document.getElementById('previewArea');
+  const wrap = document.getElementById('previewTableWrap');
+  if (!rows.length) { showToast('입력된 데이터가 없습니다.','error'); area.style.display='none'; return; }
+
+  const hs = ['순번','이름','핸드폰','우편번호','주소(도로명)','상세주소','박스타입'];
+  let html = `<table class="preview-table"><thead><tr>${hs.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(r => {
+    html += `<tr>
+      <td>${r.num}</td>
+      <td>${escH(r.name)}</td>
+      <td>${escH(r.phone)}</td>
+      <td style="text-align:center;">${escH(r.zipcode)}</td>
+      <td>${escH(r.address)}</td>
+      <td>${escH(r.detail)}</td>
+      <td style="text-align:center;font-weight:700;">${escH(r.boxType)}</td>
+    </tr>`;
+  });
+  html += `</tbody></table><p style="margin-top:6px;font-size:12px;color:#64748b;">총 ${rows.length}건</p>`;
+  wrap.innerHTML = html;
+  area.style.display = 'block';
+  area.scrollIntoView({ behavior:'smooth' });
+}
+
+/* ═══════════════ 주문 가져오기 ═══════════════ */
+async function loadOrders() {
+  const area = document.getElementById('orderListArea');
+  area.innerHTML = '<div class="loading-row">🔄 주문 목록 로딩 중...</div>';
+  try {
+    const r = await fetch('tables/orders?limit=500&sort=created_at');
+    const data = await r.json();
+    allOrders = (data.data||[]).filter(o =>
+      ['payment_confirmed','shipped','transfer_confirmed'].includes(o.payment_status)
+    );
+    if (!allOrders.length) { area.innerHTML = '<div class="loading-row">결제 완료된 주문이 없습니다.</div>'; return; }
+    renderOrderList();
+  } catch(err) {
+    area.innerHTML = `<div class="loading-row" style="color:#ef4444;">오류: ${err.message}</div>`;
+  }
+}
+
+function renderOrderList() {
+  const area = document.getElementById('orderListArea');
+  const SL = { payment_confirmed:'결제완료', shipped:'배송중', transfer_confirmed:'입금확인' };
+  const SC = { payment_confirmed:'#16a34a',  shipped:'#2563eb',transfer_confirmed:'#d97706' };
+
+  let html = `<div style="margin-bottom:8px;font-size:12px;color:#64748b;">총 ${allOrders.length}건</div>
+    <div style="overflow-x:auto;">
+    <table class="box-table" style="font-size:12px;">
+      <thead><tr>
+        <th><input type="checkbox" id="chkAll" onchange="toggleAllOrders(this.checked)"></th>
+        <th>주문번호</th><th>주문일</th><th>수령인</th><th>연락처</th>
+        <th>주소</th><th>상품</th><th>상태</th>
+      </tr></thead><tbody>`;
+
+  allOrders.forEach(o => {
+    let items = [];
+    try { items = typeof o.items==='string'?JSON.parse(o.items):(o.items||[]); } catch(e){}
+    const prod = items.map(i=>i.name||'').filter(Boolean).join(', ').substring(0,30);
+    const date = o.created_at ? new Date(o.created_at).toLocaleDateString('ko-KR') : '-';
+    html += `<tr>
+      <td><input type="checkbox" class="order-chk" value="${o.id}"></td>
+      <td style="font-weight:600;">${escH(o.order_number||o.id.substring(0,8))}</td>
+      <td>${date}</td>
+      <td>${escH(o.shipping_name||o.user_name||'-')}</td>
+      <td>${escH(o.shipping_phone||o.user_phone||'-')}</td>
+      <td style="text-align:left;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        ${escH(o.shipping_address||o.user_address||'-')}</td>
+      <td style="text-align:left;">${escH(prod)}</td>
+      <td style="color:${SC[o.payment_status]||'#64748b'};font-weight:600;">${SL[o.payment_status]||o.payment_status}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  area.innerHTML = html;
+}
+
+function toggleAllOrders(c) { document.querySelectorAll('.order-chk').forEach(x => x.checked=c); }
+function selectAllOrders()  { toggleAllOrders(true);  const a=document.getElementById('chkAll'); if(a) a.checked=true; }
+function deselectAllOrders(){ toggleAllOrders(false); const a=document.getElementById('chkAll'); if(a) a.checked=false; }
+
+function importSelectedOrders() {
+  const checked = [...document.querySelectorAll('.order-chk:checked')].map(c=>c.value);
+  if (!checked.length) { showToast('주문을 선택해주세요.','error'); return; }
+
+  const defaultBox = document.getElementById('importDefaultBox').value;
+  const selected   = allOrders.filter(o => checked.includes(o.id));
+
+  importedData = selected.map((o, i) => {
+    let items = [];
+    try { items = typeof o.items==='string'?JSON.parse(o.items):(o.items||[]); } catch(e){}
+    const prod = items.map(it=>it.name||'').filter(Boolean).join(', ').substring(0,30);
+    const qty  = items.reduce((s,it)=>s+(it.quantity||1),0);
+
+    // 주소 분리: shipping_address_detail 필드 우선, 없으면 콤마 뒤
+    let mainAddr   = o.shipping_address || o.user_address || '';
+    let detailAddr = o.shipping_address_detail || o.user_address_detail || '';
+    if (!detailAddr) {
+      const ci = mainAddr.lastIndexOf(',');
+      if (ci > 0) { detailAddr = mainAddr.substring(ci+1).trim(); mainAddr = mainAddr.substring(0,ci).trim(); }
+    }
+
+    return {
+      num: i+1,
+      name:    o.shipping_name  || o.user_name  || '',
+      phone:   o.shipping_phone || o.user_phone || '',
+      zipcode: o.shipping_zipcode || o.user_zipcode || '',
+      address: mainAddr,
+      detail:  detailAddr.substring(0,30),
+      boxType: defaultBox,
+      productName: prod,
+      qty,
+      note: o.note || ''
+    };
+  });
+
+  renderImportedTable();
+  document.getElementById('importedDataCard').style.display = 'block';
+  document.getElementById('importedDataCard').scrollIntoView({ behavior:'smooth' });
+  showToast(`✅ ${importedData.length}건 가져왔습니다.`,'success');
+}
+
+/* ★★★ 가져오기 테이블 - 우편번호/주소/상세주소 분리 렌더링 ★★★ */
+function renderImportedTable() {
+  const tbody  = document.getElementById('importedRows');
+  const allowed= COURIER_BOX[selectedImportCourier] || ['A'];
+
+  tbody.innerHTML = importedData.map((r, i) => {
+    const boxOpts = allowed.map(b => `<option value="${b}"${r.boxType===b?' selected':''}>${b}</option>`).join('');
+    return `
+    <tr>
+      <td class="no-cell">${r.num}</td>
+      <td><input class="edit-input" type="text"
+          id="i_${i}_name" value="${escH(r.name)}"
+          oninput="importedData[${i}].name=this.value"></td>
+      <td><input class="edit-input" type="tel"
+          id="i_${i}_phone" value="${escH(r.phone)}"
+          oninput="fmtPhone(this);importedData[${i}].phone=this.value"></td>
+      <td><button class="addr-search-btn" onclick="openAddrSearch(${i},'i_')">🔍 주소검색</button></td>
+      <td><input class="edit-input" type="text"
+          id="i_${i}_zip" value="${escH(r.zipcode)}"
+          style="text-align:center;"
+          oninput="importedData[${i}].zipcode=this.value" maxlength="10"></td>
+      <td><input class="edit-input" type="text"
+          id="i_${i}_addr" value="${escH(r.address)}"
+          oninput="importedData[${i}].address=this.value"></td>
+      <td><input class="edit-input" type="text"
+          id="i_${i}_addr2" value="${escH(r.detail)}"
+          oninput="importedData[${i}].detail=this.value" maxlength="30"
+          placeholder="동·호수 등"></td>
+      <td><select style="width:100%;border:1px solid #e2e8f0;border-radius:4px;padding:3px 4px;font-size:11px;"
+          onchange="importedData[${i}].boxType=this.value">${boxOpts}</select></td>
+      <td style="font-size:11px;color:#374151;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${escH(r.productName||'')}</td>
+      <td style="font-size:11px;text-align:center;">${r.qty||''}</td>
+    </tr>`;
+  }).join('');
+
+  const countEl = document.getElementById('importedCount');
+  if (countEl) countEl.textContent = `총 ${importedData.length}건 | 우편번호·주소·상세주소 각 셀을 직접 수정하거나 🔍 주소검색을 이용하세요.`;
+}
+
+function downloadImportedExcel() {
+  if (!importedData.length) { showToast('데이터가 없습니다.','error'); return; }
+  exportToExcel(buildSheetData(importedData, {}), selectedImportCourier, COURIER_NAMES[selectedImportCourier]);
+}
+
+function clearImported() {
+  importedData = [];
+  document.getElementById('importedRows').innerHTML = '';
+  document.getElementById('importedDataCard').style.display = 'none';
+}
+
+/* ═══════════════ 토스트 ═══════════════ */
+function showToast(msg, type='default') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast${type!=='default'?' '+type:''}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3000);
+}
+
+/* ═══════════════ 초기화 ═══════════════ */
+function init() {
+  if (typeof loadHeader === 'function') loadHeader('delivery');
+  for (let i = 0; i < 3; i++) addRow(); // 기본 3행
+}
+init();
+</script>
+</body>
+</html>

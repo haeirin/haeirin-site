@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>주문/결제 - My Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .co-layout { display:grid; grid-template-columns:1fr 360px; gap:20px; align-items:start; }
+    @media(max-width:900px){ .co-layout{ grid-template-columns:1fr; } }
+
+    .co-section { background:white; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:14px; overflow:hidden; }
+    .co-sec-head { padding:14px 20px; background:var(--bg); border-bottom:1px solid var(--border); font-weight:700; font-size:15px; }
+    .co-sec-body { padding:20px; }
+
+    .pay-tabs { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+    .pay-tab {
+      padding:14px; border:2px solid var(--border); border-radius:var(--radius);
+      cursor:pointer; text-align:center; transition:var(--transition); background:white;
+    }
+    .pay-tab:hover { border-color:var(--primary); }
+    .pay-tab.active { border-color:var(--primary); background:var(--primary-light); }
+    .pay-tab-icon { font-size:26px; margin-bottom:5px; }
+    .pay-tab-name { font-size:14px; font-weight:700; }
+    .pay-tab-desc { font-size:12px; color:var(--text-muted); margin-top:2px; }
+
+    .bank-box {
+      background:#fffbeb; border:1.5px solid #f59e0b; border-radius:var(--radius); padding:18px;
+    }
+    .bank-row { display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:14px; }
+    .bank-lbl { color:var(--text-muted); font-size:13px; }
+    .bank-val { font-weight:700; }
+    .copy-btn {
+      background:var(--warning); color:white; border:none; padding:4px 12px;
+      border-radius:6px; font-size:12px; cursor:pointer; font-weight:700; font-family:var(--font);
+    }
+    .copy-btn:hover { background:#b45309; }
+
+    .sum-sticky { position:sticky; top:80px; }
+    .sum-box { background:white; border-radius:var(--radius); border:1px solid var(--border); overflow:hidden; }
+    .sum-head { padding:14px 20px; background:var(--bg); border-bottom:1px solid var(--border); font-weight:800; font-size:15px; }
+    .sum-body { padding:18px 20px; }
+    .sum-item { display:flex; justify-content:space-between; padding:6px 0; font-size:13px; border-bottom:1px solid var(--border); }
+    .sum-item:last-of-type { border-bottom:none; }
+    .sum-total { display:flex; justify-content:space-between; padding:14px 0 8px; font-size:20px; font-weight:800; color:var(--primary); border-top:2px solid var(--border); margin-top:6px; }
+
+    .order-item { display:flex; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+    .order-item:last-child { border-bottom:none; }
+    .order-item-img { width:56px; height:56px; border-radius:8px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-size:22px; overflow:hidden; flex-shrink:0; border:1px solid var(--border); }
+    .order-item-img img { width:100%; height:100%; object-fit:cover; }
+  </style>
+</head>
+<body>
+<header class="header" id="mainHeader"></header>
+
+<main class="page-content">
+  <!-- Steps -->
+  <div class="steps-bar" style="margin-bottom:28px;">
+    <div class="step-node done">
+      <div class="step-circle">✓</div>
+      <div class="step-node-label">장바구니</div>
+    </div>
+    <div class="step-line done"></div>
+    <div class="step-node active">
+      <div class="step-circle">2</div>
+      <div class="step-node-label">주문/결제</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-node">
+      <div class="step-circle">3</div>
+      <div class="step-node-label">완료</div>
+    </div>
+  </div>
+
+  <h1 style="font-size:24px;font-weight:800;margin-bottom:20px;">📋 주문 / 결제</h1>
+  <div class="co-layout" id="coLayout">
+    <div style="text-align:center;padding:80px;color:var(--text-muted);">
+      <div class="spinner" style="margin:0 auto 20px;"></div><p>불러오는 중...</p>
+    </div>
+  </div>
+</main>
+
+<footer class="footer" style="margin-top:48px;">
+  <div class="footer-bottom" style="text-align:center;">
+    <a href="cart.html" style="color:#94a3b8;">← 장바구니로 돌아가기</a>
+  </div>
+</footer>
+<div class="toast-container"></div>
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script src="js/utils.js"></script>
+<script>
+  let coItems = [], payMethod = 'bank_transfer', settings = {}, user = null;
+  let shippingFee = 3000, freeThreshold = 50000;
+
+  /* ===== 카카오 주소 검색 (결제 페이지) ===== */
+  function openCheckoutPostcode() {
+    const wrapper = document.getElementById('checkoutPostcodeWrapper');
+    wrapper.style.display = 'block';
+    new daum.Postcode({
+      oncomplete: function(data) {
+        const addr = data.roadAddress || data.jibunAddress;
+        document.getElementById('rcvZip').value  = data.zonecode;
+        document.getElementById('rcvAddr').value = addr;
+        wrapper.style.display = 'none';
+        const addr2El = document.getElementById('rcvAddr2');
+        if (addr2El) addr2El.focus();
+      },
+      onclose: function() {
+        wrapper.style.display = 'none';
+      },
+      width: '100%',
+      height: '380px'
+    }).embed(document.getElementById('checkoutPostcodeLayer'));
+  }
+
+  async function init() {
+    await renderHeader();
+    user = Auth.getUser();
+    if (!user) { toast('로그인이 필요합니다.','warning'); setTimeout(()=>{ location.href='login.html'; },900); return; }
+
+    try {
+      settings = await Settings.getAll();
+      shippingFee = parseInt(settings.shipping_fee_standard || 3000);
+      freeThreshold = parseInt(settings.shipping_fee_free_threshold || 50000);
+    } catch {}
+
+    const mode = new URLSearchParams(location.search).get('mode');
+    if (mode === 'buynow') {
+      const bn = localStorage.getItem('shop_buy_now');
+      coItems = bn ? JSON.parse(bn) : [];
+    } else {
+      const ci = localStorage.getItem('shop_checkout_items');
+      coItems = ci ? JSON.parse(ci) : [];
+    }
+
+    if (coItems.length === 0) {
+      document.getElementById('coLayout').innerHTML =
+        `<div style="grid-column:1/-1;text-align:center;padding:60px;">
+           <div style="font-size:48px;margin-bottom:16px;">😕</div>
+           <h3>주문할 상품이 없습니다</h3>
+           <a href="index.html" class="btn btn-primary" style="margin-top:16px;">쇼핑하러 가기</a>
+         </div>`;
+      return;
+    }
+    renderCheckout();
+    await fillUserInfo();
+  }
+
+  async function fillUserInfo() {
+    try {
+      const res = await API.get('users', { limit:500 });
+      const found = (res.data||[]).find(u => u.id === user.id);
+      if (found) {
+        setValue('rcvName',  found.name||'');
+        setValue('rcvPhone', found.phone||'');
+        setValue('rcvZip',   found.zipcode||'');
+        setValue('rcvAddr',  found.address||'');
+        setValue('rcvAddr2', found.address_detail||'');
+      }
+    } catch {}
+  }
+
+  function setValue(id, v) { const el = document.getElementById(id); if(el) el.value=v; }
+
+  function calcTotals() {
+    const sub  = coItems.reduce((s,i) => s + i.product_price * i.quantity, 0);
+    const ship = sub >= freeThreshold ? 0 : shippingFee;
+    return { sub, ship, total: sub + ship };
+  }
+
+  function renderCheckout() {
+    const { sub, ship, total } = calcTotals();
+    document.getElementById('coLayout').innerHTML = `
+      <div>
+        <!-- 주문 상품 -->
+        <div class="co-section">
+          <div class="co-sec-head">📦 주문 상품 (${coItems.length}개)</div>
+          <div class="co-sec-body">
+            ${coItems.map(item => `
+              <div class="order-item">
+                <div class="order-item-img">
+                  ${item.product_thumbnail
+                    ? `<img src="${item.product_thumbnail}" alt="" onerror="this.parentElement.innerHTML='🛍️'">`
+                    : '🛍️'}
+                </div>
+                <div style="flex:1;">
+                  <div style="font-weight:700;font-size:14px;margin-bottom:3px;">${item.product_name}</div>
+                  <div style="font-size:12px;color:var(--text-muted);">
+                    ${[item.selected_color&&`색상:${item.selected_color}`, item.selected_size&&`사이즈:${item.selected_size}`, item.selected_extra&&`추가:${item.selected_extra}`, `수량:${item.quantity}개`].filter(Boolean).join(' / ')}
+                  </div>
+                  <div style="font-weight:800;color:var(--primary);font-size:14px;margin-top:4px;">${formatPrice(item.product_price*item.quantity)}</div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+
+        <!-- 배송지 -->
+        <div class="co-section">
+          <div class="co-sec-head">🏠 배송지 정보</div>
+          <div class="co-sec-body">
+            <div class="form-group">
+              <label class="form-label">수령인 <span class="required">*</span></label>
+              <input type="text" class="form-control" id="rcvName" autocomplete="name" placeholder="수령인 이름" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">연락처 <span class="required">*</span></label>
+              <input type="tel" class="form-control" id="rcvPhone" autocomplete="tel" placeholder="010-0000-0000" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">배송 주소 <span class="required">*</span></label>
+              <div style="display:flex;gap:8px;margin-bottom:8px;">
+                <input type="text" class="form-control" id="rcvZip" placeholder="우편번호" style="max-width:130px;" readonly>
+                <button type="button" class="btn btn-outline" onclick="openCheckoutPostcode()">📮 주소 검색</button>
+              </div>
+              <div id="checkoutPostcodeWrapper" style="display:none;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;">
+                <div id="checkoutPostcodeLayer"></div>
+              </div>
+              <input type="text" class="form-control" id="rcvAddr" autocomplete="street-address" placeholder="기본 주소 (주소 검색 후 자동 입력)" required readonly style="margin-bottom:8px;">
+              <input type="text" class="form-control" id="rcvAddr2" autocomplete="address-line2" placeholder="상세 주소 (동·호수 등 직접 입력)">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">배송 메모</label>
+              <select class="form-control" id="noteSelect" onchange="toggleCustomNote()">
+                <option value="">배송 메모 선택</option>
+                <option>문 앞에 놓아주세요</option>
+                <option>경비실에 맡겨주세요</option>
+                <option>부재 시 연락 주세요</option>
+                <option>직접 입력</option>
+              </select>
+            </div>
+            <div id="customNoteWrap" style="display:none;margin-top:10px;">
+              <input type="text" class="form-control" id="customNote" placeholder="배송 메모 직접 입력">
+            </div>
+          </div>
+        </div>
+
+        <!-- 결제 수단 -->
+        <div class="co-section">
+          <div class="co-sec-head">💳 결제 수단</div>
+          <div class="co-sec-body">
+            <div class="pay-tabs">
+              <div class="pay-tab active" id="pt_bank" onclick="selectPay('bank_transfer')">
+                <div class="pay-tab-icon">🏦</div>
+                <div class="pay-tab-name">계좌이체</div>
+                <div class="pay-tab-desc">무통장 입금</div>
+              </div>
+              <div class="pay-tab" id="pt_card" onclick="selectPay('card')">
+                <div class="pay-tab-icon">💳</div>
+                <div class="pay-tab-name">카드 결제</div>
+                <div class="pay-tab-desc">신용/체크카드</div>
+              </div>
+            </div>
+
+            <!-- 계좌이체 -->
+            <div id="bankInfo">
+              <div class="bank-box">
+                <div style="font-weight:800;font-size:14px;margin-bottom:12px;">💰 입금 계좌</div>
+                <div class="bank-row">
+                  <span class="bank-lbl">은행</span>
+                  <span class="bank-val">${settings.bank_account_bank||'-'}</span>
+                </div>
+                <div style="background:white;border-radius:8px;padding:10px 12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;">
+                  <div>
+                    <div class="bank-lbl">계좌번호</div>
+                    <div class="bank-val" id="bankNum" style="font-size:16px;letter-spacing:1px;">${settings.bank_account_number||'-'}</div>
+                  </div>
+                  <button class="copy-btn" onclick="copyAcct()">복사</button>
+                </div>
+                <div class="bank-row">
+                  <span class="bank-lbl">예금주</span>
+                  <span class="bank-val">${settings.bank_account_holder||'-'}</span>
+                </div>
+                <div class="bank-row" style="border-top:1px solid #fcd34d;margin-top:8px;padding-top:12px;">
+                  <span class="bank-lbl">입금 금액</span>
+                  <span style="font-weight:800;font-size:17px;color:#b45309;" id="payAmtDisp">${formatPrice(total)}</span>
+                </div>
+              </div>
+              <div class="alert alert-warning" style="margin-top:12px;">
+                ⚠️ 주문 후 <strong>24시간 이내</strong> 미입금 시 자동 취소됩니다.<br>
+                입금 완료 후 주문 완료 페이지에서 <strong>"입금 완료 확인"</strong> 버튼을 눌러주세요.
+              </div>
+            </div>
+
+            <!-- 카드 -->
+            <div id="cardInfo" style="display:none;">
+              <div style="background:#f0fdfa;border:1.5px solid #5eefdf;border-radius:var(--radius);padding:24px;text-align:center;">
+                <div style="font-size:36px;margin-bottom:12px;">💳</div>
+                <div style="font-weight:700;font-size:16px;margin-bottom:8px;">카드 결제</div>
+                <div class="alert alert-info" style="text-align:left;margin-top:12px;">
+                  ℹ️ 카드 결제는 <strong>PG사(토스페이먼츠·포트원)</strong> 연동이 필요합니다.<br>
+                  현재는 계좌이체로 주문을 진행해주세요.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 동의 -->
+        <div class="co-section">
+          <div class="co-sec-body">
+            <label class="checkbox-group">
+              <input type="checkbox" id="agreeOrder">
+              <div>
+                <div style="font-weight:700;">[필수] 주문 내용 확인 및 결제 동의</div>
+                <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">위 주문 내용을 확인하였으며 구매에 동의합니다.</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="sum-sticky">
+        <div class="sum-box">
+          <div class="sum-head">📊 결제 금액</div>
+          <div class="sum-body">
+            ${coItems.map(item => `
+              <div class="sum-item">
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">${item.product_name} ×${item.quantity}</span>
+                <span style="font-weight:600;flex-shrink:0;">${formatPrice(item.product_price*item.quantity)}</span>
+              </div>`).join('')}
+            <div style="padding-top:10px;margin-top:4px;">
+              <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px;">
+                <span>상품 금액</span><span>${formatPrice(sub)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px;">
+                <span>배송비</span>
+                <span style="${ship===0?'color:var(--success);font-weight:700;':''}">
+                  ${ship===0?'무료':formatPrice(ship)}
+                </span>
+              </div>
+              <div class="sum-total"><span>최종 금액</span><span>${formatPrice(total)}</span></div>
+            </div>
+            <button class="btn btn-primary btn-full btn-lg" style="margin-top:14px;" id="orderBtn" onclick="submitOrder()">
+              💳 주문하기
+            </button>
+            <p style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:8px;">
+              입금 완료 후 주문이 처리됩니다
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+    initPhoneInput(document.getElementById('rcvPhone'));
+  }
+
+  function toggleCustomNote() {
+    const v = document.getElementById('noteSelect').value;
+    document.getElementById('customNoteWrap').style.display = v==='직접 입력' ? 'block' : 'none';
+  }
+
+  function selectPay(method) {
+    payMethod = method;
+    document.getElementById('pt_bank').classList.toggle('active', method==='bank_transfer');
+    document.getElementById('pt_card').classList.toggle('active', method==='card');
+    document.getElementById('bankInfo').style.display = method==='bank_transfer' ? 'block' : 'none';
+    document.getElementById('cardInfo').style.display = method==='card' ? 'block' : 'none';
+  }
+
+  function copyAcct() {
+    const num = settings.bank_account_number || '';
+    navigator.clipboard.writeText(num)
+      .then(() => toast('계좌번호가 복사되었습니다! 📋','success'))
+      .catch(() => toast(`계좌번호: ${num}`,'default',5000));
+  }
+
+  async function submitOrder() {
+    const name  = document.getElementById('rcvName').value.trim();
+    const phone = document.getElementById('rcvPhone').value.trim();
+    const addrBase = document.getElementById('rcvAddr').value.trim();
+    const addrDetail = document.getElementById('rcvAddr2') ? document.getElementById('rcvAddr2').value.trim() : '';
+    const zip = document.getElementById('rcvZip') ? document.getElementById('rcvZip').value.trim() : '';
+    const addr = [zip ? '['+zip+']' : '', addrBase, addrDetail].filter(Boolean).join(' ');
+    const agree = document.getElementById('agreeOrder').checked;
+
+    if (!name||!phone||!addrBase) { toast('배송지 정보를 모두 입력해주세요.','warning'); return; }
+    if (!agree) { toast('주문 내용 확인 및 결제에 동의해주세요.','warning'); return; }
+
+    const noteEl = document.getElementById('noteSelect');
+    let note = noteEl.value;
+    if (note === '직접 입력') note = document.getElementById('customNote').value.trim();
+
+    const btn = document.getElementById('orderBtn');
+    btn.disabled = true; btn.textContent = '처리 중...';
+    showLoading();
+
+    try {
+      // ── 0) 주문 전 재고 최종 확인 ──
+      for (const item of coItems) {
+        try {
+          const prod = await API.getOne('products', item.product_id);
+          const availStock = parseInt(prod.stock || 0);
+          if (availStock < item.quantity) {
+            hideLoading();
+            const msg = availStock <= 0
+              ? `"${item.product_name}"이(가) 품절되었습니다. 장바구니를 확인해주세요.`
+              : `"${item.product_name}" 재고 부족 (남은 재고: ${availStock}개)`;
+            toast('😢 ' + msg, 'error', 5000);
+            btn.disabled = false; btn.textContent = '💳 주문하기';
+            return;
+          }
+        } catch { /* 확인 실패 시 통과 */ }
+      }
+
+      const { sub, ship, total } = calcTotals();
+      const orderId = generateId();
+      const orderNum = generateOrderNumber();
+
+      // ── 1) 주문 생성 ──
+      await API.create('orders', {
+        id: orderId, order_number: orderNum,
+        user_id: user.id, user_name: user.name,
+        user_phone: phone, user_address: addr,
+        items: JSON.stringify(coItems.map(i => ({
+          product_id: i.product_id, product_name: i.product_name,
+          product_price: i.product_price, selected_color: i.selected_color||'',
+          selected_size: i.selected_size||'', selected_extra: i.selected_extra||'',
+          quantity: i.quantity, subtotal: i.product_price * i.quantity
+        }))),
+        total_price: sub, shipping_fee: ship, final_price: total,
+        payment_method: payMethod, payment_status: 'pending',
+        shipping_name: name, shipping_address: addr, shipping_phone: phone,
+        note: note||''
+      });
+
+      // ── 2) 재고 차감 ──
+      // 같은 상품이 여러 번 담겼을 경우를 위해 product_id 별로 수량 합산
+      const qtyMap = {};
+      const stockByOptMap = {};
+      coItems.forEach(i => {
+        // 총 재고 합산
+        qtyMap[i.product_id] = (qtyMap[i.product_id] || 0) + i.quantity;
+
+        // 옵션별 재고 합산 키: "색상__사이즈"
+        const optKey = `${i.product_id}__${i.selected_color||''}__${i.selected_size||''}`;
+        if (!stockByOptMap[i.product_id]) stockByOptMap[i.product_id] = {};
+        const cellKey = `${i.selected_color||''}_${i.selected_size||''}`;
+        stockByOptMap[i.product_id][cellKey] =
+          (stockByOptMap[i.product_id][cellKey] || 0) + i.quantity;
+      });
+
+      // 각 상품의 현재 재고를 읽어와 차감 후 업데이트
+      for (const productId of Object.keys(qtyMap)) {
+        try {
+          const prod = await API.getOne('products', productId);
+          const newStock = Math.max(0, (parseInt(prod.stock) || 0) - qtyMap[productId]);
+
+          // 옵션별 재고(stock_by_option)도 차감
+          let sbo = {};
+          try { sbo = JSON.parse(prod.stock_by_option || '{}'); } catch {}
+          const optDeduct = stockByOptMap[productId] || {};
+          Object.entries(optDeduct).forEach(([cellKey, deductQty]) => {
+            if (sbo[cellKey] !== undefined) {
+              sbo[cellKey] = Math.max(0, (parseInt(sbo[cellKey]) || 0) - deductQty);
+            }
+          });
+
+          await API.patch('products', productId, {
+            stock: newStock,
+            stock_by_option: JSON.stringify(sbo)
+          });
+        } catch (stockErr) {
+          // 재고 차감 실패해도 주문은 완료 처리
+          console.warn('재고 차감 실패:', productId, stockErr);
+        }
+      }
+
+      // ── 3) 장바구니 비우기 ──
+      coItems.forEach(item => {
+        if (item.cart_key) Cart.remove(item.cart_key);
+      });
+      localStorage.removeItem('shop_checkout_items');
+      localStorage.removeItem('shop_buy_now');
+
+      hideLoading();
+      window.location.href = `order-complete.html?order=${orderId}&num=${encodeURIComponent(orderNum)}`;
+    } catch(e) {
+      hideLoading(); console.error(e);
+      toast('주문 처리 중 오류가 발생했습니다.','error');
+      btn.disabled = false; btn.textContent = '💳 주문하기';
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

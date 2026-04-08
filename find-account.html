@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>계정 찾기 - My Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { min-height:100vh; display:flex; flex-direction:column; }
+    .auth-wrap {
+      flex:1; display:flex; align-items:flex-start; justify-content:center;
+      padding:40px 16px;
+      background:linear-gradient(145deg,#f0fdfa 0%,#ccfbf1 100%);
+    }
+    .auth-box {
+      background:white; border-radius:20px; padding:44px 40px;
+      width:100%; max-width:480px; box-shadow:0 12px 40px rgba(13,148,136,0.14);
+    }
+    @media(max-width:480px){ .auth-box{ padding:28px 18px; } }
+    .auth-icon { text-align:center; font-size:48px; margin-bottom:6px; }
+    .auth-title { text-align:center; font-size:24px; font-weight:800; margin-bottom:6px; }
+    .auth-sub { text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:28px; }
+
+    /* 탭 */
+    .find-tabs {
+      display:flex; border-bottom:2px solid var(--border); margin-bottom:28px;
+    }
+    .find-tab {
+      flex:1; padding:12px; text-align:center; font-size:14px; font-weight:600;
+      color:var(--text-muted); cursor:pointer; border-bottom:2px solid transparent;
+      margin-bottom:-2px; transition:all 0.2s;
+    }
+    .find-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+
+    /* 패널 */
+    .find-panel { display:none; }
+    .find-panel.active { display:block; }
+
+    /* 결과 카드 */
+    .result-card {
+      background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:12px;
+      padding:20px; margin-top:20px; display:none;
+    }
+    .result-card.show { display:block; }
+    .result-card.error-card { background:#fef2f2; border-color:#fecaca; }
+    .result-title { font-size:15px; font-weight:700; margin-bottom:12px; }
+    .result-row { display:flex; justify-content:space-between; align-items:center;
+                  padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.05); font-size:14px; }
+    .result-row:last-child { border-bottom:none; }
+    .result-label { color:var(--text-muted); font-size:13px; }
+    .result-value { font-weight:600; }
+
+    /* 새 전화번호 변경 폼 */
+    .change-phone-form {
+      background:#f8fafc; border:1.5px solid var(--border); border-radius:12px;
+      padding:20px; margin-top:16px; display:none;
+    }
+    .change-phone-form.show { display:block; }
+
+    .pw-toggle {
+      position:absolute; right:12px; top:50%; transform:translateY(-50%);
+      background:none; border:none; cursor:pointer; font-size:18px;
+      color:var(--text-muted); padding:4px;
+    }
+    .divider { display:flex; align-items:center; gap:12px; margin:20px 0; color:var(--text-muted); font-size:13px; }
+    .divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+    .info-box {
+      background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px;
+      padding:12px 14px; font-size:13px; color:#0f766e; margin-bottom:16px;
+      line-height:1.7;
+    }
+  </style>
+</head>
+<body>
+<header class="header" id="mainHeader"></header>
+
+<div class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-icon">🔍</div>
+    <h1 class="auth-title">계정 찾기</h1>
+    <p class="auth-sub">이메일로 계정 정보를 확인하세요</p>
+
+    <!-- 탭 -->
+    <div class="find-tabs">
+      <div class="find-tab active" onclick="switchTab('find')" id="tab-find">닉네임 찾기</div>
+      <div class="find-tab" onclick="switchTab('phone')" id="tab-phone">전화번호(비번) 변경</div>
+    </div>
+
+    <!-- ===== 탭 1: 닉네임 찾기 ===== -->
+    <div class="find-panel active" id="panel-find">
+      <div class="info-box">
+        ℹ️ 가입 시 등록한 <strong>이름</strong>과 <strong>이메일</strong>로 닉네임을 확인할 수 있습니다.<br>
+        이 쇼핑몰의 로그인 비밀번호는 <strong>전화번호</strong>입니다.
+      </div>
+      <div class="form-group">
+        <label class="form-label">이름 <span class="required">*</span></label>
+        <input type="text" class="form-control" id="find_name" placeholder="가입 시 등록한 이름">
+        <div class="form-error" id="fe_name" style="display:none">⚠️ 이름을 입력해주세요</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">이메일 <span class="required">*</span></label>
+        <input type="email" class="form-control" id="find_email" placeholder="가입 시 등록한 이메일">
+        <div class="form-error" id="fe_email" style="display:none">⚠️ 이메일을 입력해주세요</div>
+      </div>
+      <button class="btn btn-primary btn-full btn-lg" onclick="findNickname()">🔍 닉네임 확인</button>
+
+      <!-- 결과 -->
+      <div class="result-card" id="findResult">
+        <div class="result-title">✅ 계정 정보를 찾았습니다</div>
+        <div class="result-row">
+          <span class="result-label">닉네임</span>
+          <span class="result-value" id="result-nick"></span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">이름</span>
+          <span class="result-value" id="result-name"></span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">이메일</span>
+          <span class="result-value" id="result-email"></span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">가입일</span>
+          <span class="result-value" id="result-date"></span>
+        </div>
+        <div style="margin-top:14px;padding:10px 12px;background:#dcfce7;border-radius:8px;font-size:13px;color:#166534;">
+          💡 로그인 방법: 닉네임 + <strong>가입 시 등록한 전화번호</strong> (숫자만)
+        </div>
+      </div>
+      <div class="result-card error-card" id="findError">
+        <div class="result-title">❌ 일치하는 계정이 없습니다</div>
+        <div style="font-size:13px;color:var(--text-muted);">입력하신 이름과 이메일로 가입된 계정이 없습니다. 정보를 확인 후 다시 시도해주세요.</div>
+      </div>
+    </div>
+
+    <!-- ===== 탭 2: 전화번호 변경 ===== -->
+    <div class="find-panel" id="panel-phone">
+      <div class="info-box">
+        ℹ️ 이 쇼핑몰은 <strong>전화번호가 비밀번호</strong>입니다.<br>
+        이메일로 본인 확인 후, 새 전화번호로 변경할 수 있습니다.
+      </div>
+
+      <!-- Step 1: 이메일 본인 확인 -->
+      <div id="phoneStep1">
+        <div class="form-group">
+          <label class="form-label">닉네임 <span class="required">*</span></label>
+          <input type="text" class="form-control" id="ch_nick" placeholder="닉네임 (영문)">
+          <div class="form-error" id="ce_nick" style="display:none">⚠️ 닉네임을 입력해주세요</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">이메일 <span class="required">*</span></label>
+          <input type="email" class="form-control" id="ch_email" placeholder="가입 시 등록한 이메일">
+          <div class="form-error" id="ce_email" style="display:none">⚠️ 이메일을 입력해주세요</div>
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="verifyForChange()">✅ 본인 확인</button>
+
+        <!-- 결과 확인 카드 -->
+        <div class="result-card" id="chVerifyResult">
+          <div class="result-title">✅ 본인 확인 완료</div>
+          <div class="result-row">
+            <span class="result-label">닉네임</span>
+            <span class="result-value" id="ch-result-nick"></span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">현재 전화번호</span>
+            <span class="result-value" id="ch-result-phone"></span>
+          </div>
+        </div>
+        <div class="result-card error-card" id="chVerifyError">
+          <div class="result-title">❌ 본인 확인 실패</div>
+          <div style="font-size:13px;color:var(--text-muted);">닉네임 또는 이메일이 일치하지 않습니다.</div>
+        </div>
+      </div>
+
+      <!-- Step 2: 새 전화번호 입력 -->
+      <div class="change-phone-form" id="phoneStep2">
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px;">📱 새 전화번호 입력</div>
+        <div class="form-group">
+          <label class="form-label">새 전화번호 <span class="required">*</span></label>
+          <input type="tel" class="form-control" id="ch_newPhone" placeholder="010-0000-0000">
+          <div class="form-hint">새 전화번호가 로그인 시 비밀번호로 사용됩니다</div>
+          <div class="form-error" id="ce_newPhone" style="display:none">⚠️ 올바른 전화번호를 입력해주세요</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">새 전화번호 확인 <span class="required">*</span></label>
+          <input type="tel" class="form-control" id="ch_newPhone2" placeholder="010-0000-0000 (동일하게 입력)">
+          <div class="form-error" id="ce_newPhone2" style="display:none">⚠️ 전화번호가 일치하지 않습니다</div>
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="changePhone()">📱 전화번호 변경 완료</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="display:flex;gap:10px;">
+      <a href="login.html" class="btn btn-outline btn-full">← 로그인</a>
+      <a href="register.html" class="btn btn-secondary btn-full">✏️ 회원가입</a>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="js/utils.js"></script>
+<script>
+  let foundUserId   = null; // 닉네임 찾기용
+  let changeUserId  = null; // 전화번호 변경용
+
+  async function init() {
+    await renderHeader();
+    initPhoneInput(document.getElementById('ch_newPhone'));
+    initPhoneInput(document.getElementById('ch_newPhone2'));
+  }
+
+  /* ===== 탭 전환 ===== */
+  function switchTab(tab) {
+    ['find','phone'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+      document.getElementById('panel-' + t).classList.toggle('active', t === tab);
+    });
+    // 결과 초기화
+    hideResult('findResult'); hideResult('findError');
+    hideResult('chVerifyResult'); hideResult('chVerifyError');
+    document.getElementById('phoneStep2').classList.remove('show');
+    changeUserId = null; foundUserId = null;
+  }
+  function hideResult(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('show');
+  }
+
+  /* ===== 닉네임 찾기 ===== */
+  async function findNickname() {
+    const name  = document.getElementById('find_name').value.trim();
+    const email = document.getElementById('find_email').value.trim();
+    let ok = true;
+    if (!name)  { setErr('fe_name',  true); ok = false; } else { setErr('fe_name', false); }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErr('fe_email', true); ok = false;
+    } else { setErr('fe_email', false); }
+    if (!ok) return;
+
+    showLoading();
+    try {
+      const res = await API.get('users', { limit: 500 });
+      const user = (res.data||[]).find(u =>
+        u.role !== 'admin' &&
+        u.name  && u.name.trim()  === name &&
+        u.email && u.email.trim().toLowerCase() === email.toLowerCase()
+      );
+      hideLoading();
+      if (!user) {
+        hideResult('findResult');
+        document.getElementById('findError').classList.add('show');
+        return;
+      }
+      hideResult('findError');
+      foundUserId = user.id;
+      document.getElementById('result-nick').textContent  = user.nickname;
+      document.getElementById('result-name').textContent  = user.name;
+      document.getElementById('result-email').textContent = user.email;
+      document.getElementById('result-date').textContent  = user.created_at
+        ? new Date(user.created_at).toLocaleDateString('ko-KR') : '정보 없음';
+      document.getElementById('findResult').classList.add('show');
+    } catch(e) {
+      hideLoading(); console.error(e);
+      toast('오류가 발생했습니다.', 'error');
+    }
+  }
+
+  /* ===== 전화번호 변경: 본인 확인 ===== */
+  async function verifyForChange() {
+    const nick  = document.getElementById('ch_nick').value.trim();
+    const email = document.getElementById('ch_email').value.trim();
+    let ok = true;
+    if (!nick)  { setErr('ce_nick',  true); ok = false; } else { setErr('ce_nick', false); }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErr('ce_email', true); ok = false;
+    } else { setErr('ce_email', false); }
+    if (!ok) return;
+
+    showLoading();
+    try {
+      const res = await API.get('users', { limit: 500 });
+      const user = (res.data||[]).find(u =>
+        u.role !== 'admin' &&
+        u.nickname === nick &&
+        u.email && u.email.trim().toLowerCase() === email.toLowerCase()
+      );
+      hideLoading();
+      if (!user) {
+        hideResult('chVerifyResult');
+        document.getElementById('chVerifyError').classList.add('show');
+        document.getElementById('phoneStep2').classList.remove('show');
+        changeUserId = null;
+        return;
+      }
+      hideResult('chVerifyError');
+      changeUserId = user.id;
+      // 전화번호 마스킹 표시
+      const ph = user.phone || '';
+      const masked = ph.length >= 11
+        ? ph.slice(0,3) + '-****-' + ph.slice(-4)
+        : ph.slice(0,3) + '-****-****';
+      document.getElementById('ch-result-nick').textContent  = user.nickname;
+      document.getElementById('ch-result-phone').textContent = masked;
+      document.getElementById('chVerifyResult').classList.add('show');
+      document.getElementById('phoneStep2').classList.add('show');
+    } catch(e) {
+      hideLoading(); console.error(e);
+      toast('오류가 발생했습니다.', 'error');
+    }
+  }
+
+  /* ===== 전화번호 변경 ===== */
+  async function changePhone() {
+    if (!changeUserId) { toast('먼저 본인 확인을 해주세요.', 'warning'); return; }
+    const p1 = document.getElementById('ch_newPhone').value.trim();
+    const p2 = document.getElementById('ch_newPhone2').value.trim();
+    let ok = true;
+    if (!p1 || p1.replace(/\D/g,'').length < 10) {
+      setErr('ce_newPhone', true); ok = false;
+    } else { setErr('ce_newPhone', false); }
+    if (p1.replace(/\D/g,'') !== p2.replace(/\D/g,'')) {
+      setErr('ce_newPhone2', true); ok = false;
+    } else { setErr('ce_newPhone2', false); }
+    if (!ok) return;
+
+    showLoading();
+    try {
+      const newPhoneNum = p1.replace(/\D/g,'');
+      await API.patch('users', changeUserId, {
+        phone: p1,
+        password: hashPassword(newPhoneNum)
+      });
+      hideLoading();
+      toast('전화번호가 변경되었습니다! 새 전화번호로 로그인해주세요. 📱', 'success');
+      // 초기화
+      document.getElementById('ch_nick').value    = '';
+      document.getElementById('ch_email').value   = '';
+      document.getElementById('ch_newPhone').value  = '';
+      document.getElementById('ch_newPhone2').value = '';
+      hideResult('chVerifyResult');
+      document.getElementById('phoneStep2').classList.remove('show');
+      changeUserId = null;
+      setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+    } catch(e) {
+      hideLoading(); console.error(e);
+      toast('변경 중 오류가 발생했습니다.', 'error');
+    }
+  }
+
+  /* ===== 공통 ===== */
+  function setErr(id, show) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? 'flex' : 'none';
+  }
+
+  init();
+</script>
+</body>
+</html>

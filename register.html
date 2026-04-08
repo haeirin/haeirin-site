@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>회원가입 - My Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { min-height:100vh; display:flex; flex-direction:column; }
+    .auth-wrap {
+      flex:1; display:flex; align-items:flex-start; justify-content:center;
+      padding:40px 16px; background:linear-gradient(145deg,#f0fdfa,#ccfbf1);
+    }
+    .auth-box {
+      background:white; border-radius:20px; padding:44px 40px;
+      width:100%; max-width:540px; box-shadow:0 12px 40px rgba(13,148,136,0.14);
+    }
+    @media(max-width:540px){ .auth-box{ padding:28px 18px; } }
+    .auth-icon { text-align:center; font-size:48px; margin-bottom:6px; }
+    .auth-title { text-align:center; font-size:24px; font-weight:800; margin-bottom:6px; }
+    .auth-sub { text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:28px; }
+
+    .step-bar { display:flex; align-items:center; margin-bottom:32px; }
+    .step-bar .step-node { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; position:relative; z-index:1; }
+    .step-bar .step-circle {
+      width:32px; height:32px; border-radius:50%; display:flex; align-items:center;
+      justify-content:center; font-size:13px; font-weight:700;
+      background:var(--border); color:var(--text-muted); transition:all 0.3s;
+    }
+    .step-bar .step-node.active .step-circle { background:var(--primary); color:white; box-shadow:0 0 0 4px rgba(13,148,136,0.22); }
+    .step-bar .step-node.done .step-circle { background:var(--success); color:white; }
+    .step-bar .step-node-label { font-size:11px; font-weight:600; color:var(--text-muted); }
+    .step-bar .step-node.active .step-node-label { color:var(--primary); }
+    .step-bar .step-node.done .step-node-label { color:var(--success); }
+    .step-bar .step-line { flex:1; height:2px; background:var(--border); margin-bottom:18px; transition:background 0.3s; }
+    .step-bar .step-line.done { background:var(--success); }
+
+    .form-step { display:none; }
+    .form-step.active { display:block; }
+
+    .privacy-scroll {
+      max-height:110px; overflow-y:auto; font-size:12px; color:var(--text-muted);
+      line-height:1.9; padding:10px; background:var(--bg); border-radius:6px; margin-bottom:10px;
+    }
+    .addr-row { display:flex; gap:10px; align-items:flex-end; }
+    .addr-row .form-control { flex:1; }
+    .divider { display:flex; align-items:center; gap:12px; margin:20px 0; color:var(--text-muted); font-size:13px; }
+    .divider::before,.divider::after{ content:''; flex:1; height:1px; background:var(--border); }
+
+    /* 카카오 우편번호 iframe */
+    #daumPostcodeWrapper {
+      display:none; border:1px solid var(--border); border-radius:var(--radius-sm);
+      margin-top:10px; overflow:hidden;
+    }
+    #daumPostcodeWrapper iframe { width:100%; height:400px; border:none; display:block; }
+
+    /* 닉네임 유효성 힌트 */
+    .nick-hint {
+      font-size:12px; color:var(--text-muted); margin-top:5px;
+    }
+    .nick-hint.ok { color:var(--success); }
+    .nick-hint.err { color:var(--danger); }
+  </style>
+</head>
+<body>
+<header class="header" id="mainHeader"></header>
+
+<div class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-icon">✏️</div>
+    <h1 class="auth-title">회원가입</h1>
+    <p class="auth-sub">My Shop과 함께 쇼핑을 시작하세요</p>
+
+    <!-- Step Bar -->
+    <div class="step-bar" id="stepBar">
+      <div class="step-node active" id="sn1">
+        <div class="step-circle">1</div>
+        <div class="step-node-label">기본정보</div>
+      </div>
+      <div class="step-line" id="sl1"></div>
+      <div class="step-node" id="sn2">
+        <div class="step-circle">2</div>
+        <div class="step-node-label">연락처</div>
+      </div>
+      <div class="step-line" id="sl2"></div>
+      <div class="step-node" id="sn3">
+        <div class="step-circle">3</div>
+        <div class="step-node-label">약관동의</div>
+      </div>
+    </div>
+
+    <form id="regForm" onsubmit="return false;">
+      <!-- ===== STEP 1: 기본정보 ===== -->
+      <div class="form-step active" id="fs1">
+        <div class="form-group">
+          <label class="form-label">닉네임 <span class="required">*</span></label>
+          <input type="text" class="form-control" id="r_nick" autocomplete="username"
+                 placeholder="닉네임 입력 (2~12자, 예: shopking)" maxlength="12"
+                 oninput="checkNick(this)" required>
+          <div class="nick-hint" id="nickHint">영문 알파벳만 사용 가능 (2~12자, 한글·숫자 불가)</div>
+          <div class="form-error" id="e_nick" style="display:none">⚠️ 영문 2~12자로 입력해주세요 (한글·숫자 불가)</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">이름 <span class="required">*</span></label>
+          <input type="text" class="form-control" id="r_name" autocomplete="name"
+                 placeholder="실명 입력" required>
+          <div class="form-error" id="e_name" style="display:none">⚠️ 이름을 입력해주세요</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">이메일 <span class="required">*</span>
+            <span style="color:var(--text-muted);font-weight:400;font-size:12px;">(계정 찾기에 사용됩니다)</span>
+          </label>
+          <input type="email" class="form-control" id="r_email" autocomplete="email"
+                 placeholder="이메일 주소" required>
+          <div class="form-error" id="e_email" style="display:none">⚠️ 올바른 이메일을 입력해주세요</div>
+        </div>
+        <button type="button" class="btn btn-primary btn-full btn-lg" onclick="goStep(2)">다음 →</button>
+      </div>
+
+      <!-- ===== STEP 2: 연락처/주소 ===== -->
+      <div class="form-step" id="fs2">
+        <div class="form-group">
+          <label class="form-label">전화번호 <span class="required">*</span>
+            <span style="color:var(--text-muted);font-weight:400;font-size:12px;">(로그인 시 비밀번호로 사용됩니다)</span>
+          </label>
+          <input type="tel" class="form-control" id="r_phone" autocomplete="tel"
+                 placeholder="010-0000-0000" required>
+          <div class="form-error" id="e_phone" style="display:none">⚠️ 전화번호를 입력해주세요</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">주소 <span class="required">*</span></label>
+          <div class="addr-row" style="margin-bottom:8px;">
+            <input type="text" class="form-control" id="r_zip" autocomplete="postal-code"
+                   placeholder="우편번호" style="max-width:140px;" readonly>
+            <button type="button" class="btn btn-outline" onclick="openPostcode()">📮 주소 검색</button>
+          </div>
+          <!-- 카카오 우편번호 API 삽입 영역 -->
+          <div id="daumPostcodeWrapper">
+            <div id="daumPostcodeLayer"></div>
+          </div>
+          <input type="text" class="form-control" id="r_addr" autocomplete="address-line1"
+                 placeholder="기본 주소 (주소 검색 후 자동 입력)" style="margin-bottom:8px;" readonly>
+          <div class="form-error" id="e_addr" style="display:none">⚠️ 주소를 검색해주세요</div>
+          <input type="text" class="form-control" id="r_addr2" autocomplete="address-line2"
+                 placeholder="상세 주소 (동·호수 등 직접 입력)">
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button type="button" class="btn btn-secondary" onclick="goStep(1)" style="min-width:90px;">← 이전</button>
+          <button type="button" class="btn btn-primary btn-full btn-lg" onclick="goStep(3)">다음 →</button>
+        </div>
+      </div>
+
+      <!-- ===== STEP 3: 약관 동의 ===== -->
+      <div class="form-step" id="fs3">
+        <div class="form-group">
+          <label class="checkbox-group" style="border-color:var(--primary-border);background:var(--primary-light);">
+            <input type="checkbox" id="agreeAll" onchange="toggleAll(this.checked)">
+            <div>
+              <div style="font-size:15px;font-weight:800;">전체 동의</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">아래 모든 약관에 동의합니다</div>
+            </div>
+          </label>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--border);margin-bottom:16px;">
+
+        <div class="form-group">
+          <label class="checkbox-group">
+            <input type="checkbox" id="agreePrivacy" onchange="syncAll()">
+            <div>
+              <div style="font-weight:700;">[필수] 개인정보 수집·이용 동의</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">주문·배송 처리를 위한 정보 수집에 동의합니다</div>
+            </div>
+          </label>
+          <div class="privacy-scroll" style="margin-top:10px;">
+            <strong>개인정보 수집·이용 동의서</strong><br>
+            ■ 수집 항목: 닉네임, 이름, 전화번호, 주소, 이메일<br>
+            ■ 수집 목적: 회원 관리, 상품 주문·배송, 계정 찾기, 고객 지원<br>
+            ■ 보유 기간: 회원 탈퇴 시 즉시 삭제 (관련 법령에 따라 보관될 수 있음)<br>
+            ■ 제3자 제공: 배송사에 배송에 필요한 최소한의 정보 제공<br>
+            ■ 동의 거부 가능하나, 거부 시 회원가입이 제한됩니다.
+          </div>
+          <div class="form-error" id="e_privacy" style="display:none">⚠️ 개인정보 동의는 필수입니다</div>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-group">
+            <input type="checkbox" id="agreeTerms" onchange="syncAll()">
+            <div>
+              <div style="font-weight:700;">[필수] 이용약관 동의</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">서비스 이용약관에 동의합니다</div>
+            </div>
+          </label>
+          <div class="privacy-scroll" style="margin-top:10px;">
+            <strong>서비스 이용약관</strong><br>
+            제1조(목적) 본 약관은 My Shop이 제공하는 쇼핑몰 서비스의 이용 조건을 규정합니다.<br>
+            제2조(이용계약) 약관에 동의하고 회원가입 신청 시 이용계약이 성립됩니다.<br>
+            제3조(서비스 이용) 회원은 관련 법령 및 본 약관을 준수하여야 합니다.<br>
+            제4조(개인정보 보호) 회사는 개인정보보호법을 준수하여 회원 정보를 보호합니다.
+          </div>
+          <div class="form-error" id="e_terms" style="display:none">⚠️ 이용약관 동의는 필수입니다</div>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-group">
+            <input type="checkbox" id="agreeMkt" onchange="syncAll()">
+            <div>
+              <div style="font-weight:700;">[선택] 마케팅 정보 수신 동의</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">이벤트·프로모션 정보를 수신합니다</div>
+            </div>
+          </label>
+        </div>
+
+        <div style="display:flex;gap:10px;">
+          <button type="button" class="btn btn-secondary" onclick="goStep(2)" style="min-width:90px;">← 이전</button>
+          <button type="button" class="btn btn-primary btn-full btn-lg" onclick="submitReg()" id="regBtn">가입 완료 🎉</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="divider">이미 계정이 있으신가요?</div>
+    <a href="login.html" class="btn btn-outline btn-full">로그인</a>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<!-- 카카오 우편번호 API -->
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script src="js/utils.js"></script>
+<script>
+  let curStep = 1;
+
+  async function init() {
+    await renderHeader();
+    if (Auth.getUser()) { window.location.href = 'index.html'; return; }
+    initPhoneInput(document.getElementById('r_phone'));
+  }
+
+  /* ===== 닉네임 실시간 검사 (영문만 허용) ===== */
+  function checkNick(input) {
+    const val = input.value;
+    // 영문 아닌 문자(한글, 숫자, 특수문자 등) 즉시 제거
+    input.value = val.replace(/[^a-zA-Z]/g, '');
+    const v = input.value;
+    const hint = document.getElementById('nickHint');
+    if (v.length === 0) {
+      hint.className = 'nick-hint';
+      hint.textContent = '영문 소문자·대문자만 사용 가능 (2~12자)';
+    } else if (v.length < 2) {
+      hint.className = 'nick-hint err';
+      hint.textContent = '⚠️ 너무 짧습니다 (최소 2자)';
+    } else if (v.length > 12) {
+      hint.className = 'nick-hint err';
+      hint.textContent = '⚠️ 너무 깁니다 (최대 12자)';
+    } else {
+      hint.className = 'nick-hint ok';
+      hint.textContent = '✅ 사용 가능한 형식입니다';
+    }
+    setErr('e_nick', false);
+  }
+
+  /* ===== 카카오 주소 검색 ===== */
+  function openPostcode() {
+    const wrapper = document.getElementById('daumPostcodeWrapper');
+    wrapper.style.display = 'block';
+    new daum.Postcode({
+      oncomplete: function(data) {
+        const addr = data.roadAddress || data.jibunAddress;
+        document.getElementById('r_zip').value  = data.zonecode;
+        document.getElementById('r_addr').value = addr;
+        wrapper.style.display = 'none';
+        document.getElementById('r_addr2').focus();
+        setErr('e_addr', false);
+      },
+      onclose: function() {
+        wrapper.style.display = 'none';
+      },
+      width: '100%',
+      height: '400px'
+    }).embed(document.getElementById('daumPostcodeLayer'));
+  }
+
+  /* ===== 단계 이동 ===== */
+  function goStep(to) {
+    if (to > curStep && !validateStep(curStep)) return;
+    for (let i = 1; i <= 3; i++) {
+      document.getElementById('sn'+i).className =
+        'step-node' + (i < to ? ' done' : i === to ? ' active' : '');
+    }
+    for (let i = 1; i <= 2; i++) {
+      document.getElementById('sl'+i).className =
+        'step-line' + (i < to ? ' done' : '');
+    }
+    document.getElementById('fs'+curStep).classList.remove('active');
+    curStep = to;
+    document.getElementById('fs'+curStep).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ===== 단계 유효성 검사 ===== */
+  function validateStep(s) {
+    if (s === 1) {
+      const nick  = document.getElementById('r_nick').value.trim();
+      const name  = document.getElementById('r_name').value.trim();
+      const email = document.getElementById('r_email').value.trim();
+      let ok = true;
+
+      // 닉네임: 영문만, 2~12자
+      const nickOk = /^[a-zA-Z]{2,12}$/.test(nick);
+      if (!nickOk) {
+        setErr('e_nick', true);
+        document.getElementById('nickHint').className = 'nick-hint err';
+        document.getElementById('nickHint').textContent = '⚠️ 영문 2~12자만 허용됩니다 (한글·숫자 불가)';
+        ok = false;
+      } else {
+        setErr('e_nick', false);
+      }
+
+      if (!name) { setErr('e_name', true); ok = false; } else { setErr('e_name', false); }
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setErr('e_email', true); ok = false;
+        if (email) toast('이메일 형식이 올바르지 않습니다.', 'warning');
+      } else {
+        setErr('e_email', false);
+      }
+      return ok;
+    }
+    if (s === 2) {
+      const phone = document.getElementById('r_phone').value.trim();
+      const addr  = document.getElementById('r_addr').value.trim();
+      let ok = true;
+      if (!phone || phone.replace(/\D/g,'').length < 10) {
+        setErr('e_phone', true);
+        document.getElementById('e_phone').textContent = '⚠️ 올바른 전화번호를 입력해주세요';
+        ok = false;
+      } else { setErr('e_phone', false); }
+      if (!addr) {
+        setErr('e_addr', true); ok = false;
+        toast('주소를 검색해주세요.', 'warning');
+      } else {
+        setErr('e_addr', false);
+      }
+      return ok;
+    }
+    return true;
+  }
+
+  function setErr(id, show) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? 'flex' : 'none';
+  }
+
+  /* ===== 약관 동의 ===== */
+  function toggleAll(v) {
+    ['agreePrivacy','agreeTerms','agreeMkt'].forEach(id => document.getElementById(id).checked = v);
+  }
+  function syncAll() {
+    const p = document.getElementById('agreePrivacy').checked;
+    const t = document.getElementById('agreeTerms').checked;
+    const m = document.getElementById('agreeMkt').checked;
+    document.getElementById('agreeAll').checked = p && t && m;
+  }
+
+  /* ===== 최종 가입 제출 ===== */
+  async function submitReg() {
+    if (!document.getElementById('agreePrivacy').checked) {
+      setErr('e_privacy', true);
+      toast('개인정보 동의는 필수입니다.', 'error'); return;
+    }
+    setErr('e_privacy', false);
+    if (!document.getElementById('agreeTerms').checked) {
+      setErr('e_terms', true);
+      toast('이용약관 동의는 필수입니다.', 'error'); return;
+    }
+    setErr('e_terms', false);
+
+    const nick  = document.getElementById('r_nick').value.trim();
+    const name  = document.getElementById('r_name').value.trim();
+    const email = document.getElementById('r_email').value.trim();
+    const phone = document.getElementById('r_phone').value.trim();
+    const zip   = document.getElementById('r_zip').value.trim();
+    const addr  = document.getElementById('r_addr').value.trim();
+    const addr2 = document.getElementById('r_addr2').value.trim();
+
+    // 최종 닉네임 검사
+    if (!/^[a-zA-Z]{2,12}$/.test(nick)) {
+      toast('닉네임은 영문 2~12자만 허용됩니다.', 'error'); return;
+    }
+
+    showLoading();
+    try {
+      const res = await API.get('users', { limit: 500 });
+      const users = res.data || [];
+
+      // 닉네임 중복
+      if (users.find(u => u.nickname === nick)) {
+        hideLoading();
+        toast('이미 사용 중인 닉네임입니다.', 'error'); return;
+      }
+      // 이메일 중복
+      if (users.find(u => u.email === email)) {
+        hideLoading();
+        toast('이미 사용 중인 이메일입니다.', 'error'); return;
+      }
+      // 전화번호 중복
+      const phoneNum = phone.replace(/\D/g,'');
+      if (users.find(u => u.phone && u.phone.replace(/\D/g,'') === phoneNum)) {
+        hideLoading();
+        toast('이미 사용 중인 전화번호입니다.', 'error'); return;
+      }
+
+      const id = generateId();
+      // 전화번호 숫자만 추출하여 비밀번호로 사용
+      const initPw = phone.replace(/\D/g,'');
+      await API.create('users', {
+        id, nickname: nick, name, email,
+        password: hashPassword(initPw),
+        phone, zipcode: zip, address: addr, address_detail: addr2,
+        privacy_agreed: true, role: 'user'
+      });
+
+      Auth.setUser({ id, nickname: nick, name, role: 'user' });
+      hideLoading();
+      toast('회원가입 완료! 환영합니다 🎉', 'success');
+      setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+    } catch(e) {
+      hideLoading(); console.error(e);
+      toast('오류가 발생했습니다.', 'error');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
