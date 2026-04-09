@@ -1,385 +1,433 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Shop</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HAEIRIN</title>
   <style>
-    .hero-inner {
-      max-width: 1280px; margin: 0 auto; padding: 80px 24px;
-      text-align: center; position: relative; z-index: 1;
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background: #f7fcfb;
+      color: #164c4a;
+      line-height: 1.5;
     }
-    .hero-inner h1 { font-size: clamp(30px,5vw,54px); font-weight: 800; margin-bottom: 14px; letter-spacing: -1px; }
-    .hero-inner p { font-size: clamp(15px,2vw,19px); opacity: 0.85; max-width: 540px; margin: 0 auto 32px; }
-    .hero-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-    .hero-btn-white {
-      padding: 14px 32px; border-radius: 50px; font-size: 15px; font-weight: 700;
-      background: white; color: var(--primary); border: none; cursor: pointer;
-      transition: all 0.2s; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-      text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    a { text-decoration: none; color: inherit; }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 16px;
     }
-    .hero-btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
-    .hero-btn-ghost {
-      padding: 14px 32px; border-radius: 50px; font-size: 15px; font-weight: 700;
-      background: rgba(255,255,255,0.15); color: white; border: 2px solid rgba(255,255,255,0.7);
-      cursor: pointer; transition: all 0.2s; text-decoration: none;
-      display: inline-flex; align-items: center; gap: 6px;
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid #d9f1ed;
+      position: sticky;
+      top: 0;
+      z-index: 20;
     }
-    .hero-btn-ghost:hover { background: rgba(255,255,255,0.25); }
-
-    .features-strip {
-      background: white; border-bottom: 1px solid var(--border);
-      padding: 14px 24px;
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 72px;
     }
-    .features-list {
-      max-width: 1280px; margin: 0 auto;
-      display: flex; justify-content: center; gap: 36px; flex-wrap: wrap;
+    .logo {
+      font-size: 30px;
+      font-weight: 800;
+      color: #16a39b;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    .feature-item {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 13px; font-weight: 600; color: var(--text-muted);
+    nav {
+      display: flex;
+      gap: 18px;
+      font-size: 16px;
+      font-weight: 700;
+      flex-wrap: wrap;
     }
-    .feature-item span:first-child { font-size: 20px; }
-
-    .no-products-msg {
-      grid-column: 1/-1; text-align: center; padding: 80px 24px;
-      color: var(--text-muted);
+    nav a {
+      color: #1d5e5a;
     }
-    .no-products-msg .emoji { font-size: 56px; margin-bottom: 16px; opacity: 0.5; }
-
-    /* ===== 비로그인 잠금 화면 ===== */
-    #guestWall {
-      display: none;
-    }
-    .guest-wall-wrap {
-      min-height: 400px;
-      display: flex; align-items: center; justify-content: center;
-      padding: 60px 24px;
-    }
-    .guest-wall-box {
-      background: white;
-      border-radius: 24px;
-      padding: 56px 48px;
+    .hero {
+      padding: 56px 0 36px;
       text-align: center;
-      max-width: 480px;
-      width: 100%;
-      box-shadow: 0 12px 48px rgba(13,148,136,0.13);
-      border: 1px solid var(--border);
     }
-    @media(max-width:480px){ .guest-wall-box{ padding:40px 24px; } }
-    .guest-wall-icon { font-size: 64px; margin-bottom: 16px; }
-    .guest-wall-title {
-      font-size: 22px; font-weight: 800; color: var(--text);
+    .hero-badge {
+      display: inline-block;
+      background: #e8faf7;
+      color: #169a91;
+      border: 1px solid #bfece6;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: 44px;
+      color: #138f87;
+      line-height: 1.2;
+    }
+    .hero p {
+      margin: 16px auto 0;
+      max-width: 760px;
+      font-size: 20px;
+      color: #356d69;
+    }
+    .hero-btns {
+      margin-top: 28px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-block;
+      padding: 14px 22px;
+      border-radius: 14px;
+      font-weight: 800;
+      font-size: 16px;
+    }
+    .btn-primary {
+      background: #16a39b;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #fff;
+      color: #138f87;
+      border: 1px solid #bfece6;
+    }
+    .benefits {
+      padding: 20px 0 14px;
+    }
+    .benefit-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    .benefit {
+      background: #fff;
+      border: 1px solid #d9f1ed;
+      border-radius: 20px;
+      padding: 22px 18px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(18, 126, 119, 0.06);
+    }
+    .benefit .icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    .benefit strong {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 6px;
+      color: #174d4a;
+    }
+    .benefit span {
+      font-size: 14px;
+      color: #5f8682;
+    }
+    .section {
+      padding: 42px 0;
+    }
+    .section-title {
+      font-size: 30px;
+      margin: 0 0 10px;
+      color: #164c4a;
+    }
+    .section-desc {
+      margin: 0 0 24px;
+      color: #5b817d;
+      font-size: 16px;
+    }
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #d9f1ed;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(18, 126, 119, 0.06);
+    }
+    .card-img {
+      background: linear-gradient(135deg, #dff8f4, #f4fffd);
+      height: 210px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 54px;
+    }
+    .card-body {
+      padding: 18px;
+    }
+    .tag {
+      display: inline-block;
+      background: #e8faf7;
+      color: #15958c;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
       margin-bottom: 10px;
     }
-    .guest-wall-desc {
-      font-size: 15px; color: var(--text-muted);
-      line-height: 1.8; margin-bottom: 32px;
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 21px;
+      color: #184f4b;
     }
-    .guest-wall-btns {
-      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    .card p {
+      margin: 0 0 14px;
+      color: #5e8480;
+      font-size: 15px;
+      min-height: 44px;
     }
-    .guest-wall-benefits {
-      display: flex; flex-direction: column; gap: 10px;
-      margin: 24px 0; text-align: left;
+    .price {
+      font-size: 24px;
+      font-weight: 800;
+      color: #14a096;
     }
-    .guest-benefit-item {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 14px; color: var(--text-muted);
-      background: var(--bg); border-radius: 10px;
-      padding: 10px 14px;
+    .live-box {
+      background: linear-gradient(135deg, #16a39b, #54cfc4);
+      color: #fff;
+      border-radius: 26px;
+      padding: 28px;
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 20px;
+      align-items: center;
     }
-    .guest-benefit-item span:first-child { font-size: 20px; }
+    .live-box h3 {
+      margin: 0 0 10px;
+      font-size: 30px;
+    }
+    .live-box p {
+      margin: 0 0 16px;
+      font-size: 17px;
+      color: #effffd;
+    }
+    .live-info {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .live-info strong {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
+    .notice {
+      background: #fff;
+      border: 1px solid #d9f1ed;
+      border-radius: 22px;
+      padding: 22px;
+    }
+    .notice ul {
+      margin: 0;
+      padding-left: 18px;
+      color: #4d7571;
+    }
+    .notice li { margin-bottom: 10px; }
+    footer {
+      margin-top: 30px;
+      background: #ffffff;
+      border-top: 1px solid #d9f1ed;
+      padding: 28px 0 50px;
+      color: #5d817e;
+      font-size: 14px;
+    }
+    .footer-brand {
+      font-size: 22px;
+      font-weight: 800;
+      color: #15958c;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .benefit-grid,
+      .product-grid,
+      .live-box {
+        grid-template-columns: 1fr 1fr;
+      }
+      .live-box {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 14px 0;
+      }
+      .logo { font-size: 28px; }
+      .hero {
+        padding: 40px 0 24px;
+      }
+      .hero h1 {
+        font-size: 32px;
+      }
+      .hero p {
+        font-size: 17px;
+      }
+      .benefit-grid,
+      .product-grid {
+        grid-template-columns: 1fr;
+      }
+      .section-title {
+        font-size: 26px;
+      }
+      nav {
+        gap: 12px;
+        font-size: 15px;
+      }
+    }
   </style>
 </head>
 <body>
-
-<header class="header" id="mainHeader"></header>
-
-<!-- Hero -->
-<section class="hero-banner">
-  <div class="hero-inner">
-    <h1 id="heroTitle">🛍️ My Shop</h1>
-    <p id="heroDesc">트렌디한 패션을 합리적인 가격에 만나보세요</p>
-    <div class="hero-btns" id="heroBtns">
-      <!-- JS에서 로그인 여부에 따라 동적 렌더링 -->
-    </div>
-  </div>
-</section>
-
-<!-- Features Strip -->
-<div class="features-strip">
-  <div class="features-list">
-    <div class="feature-item"><span>🚚</span><span id="freeLabel">5만원 이상 무료배송</span></div>
-    <div class="feature-item"><span>🏦</span><span>계좌이체 간편결제</span></div>
-    <div class="feature-item"><span>🔒</span><span>안전한 거래</span></div>
-    <div class="feature-item"><span>📦</span><span>빠른 배송</span></div>
-  </div>
-</div>
-
-<!-- ===== 비로그인 잠금 화면 ===== -->
-<div id="guestWall">
-  <div class="guest-wall-wrap">
-    <div class="guest-wall-box">
-      <div class="guest-wall-icon">🔒</div>
-      <div class="guest-wall-title">로그인 후 쇼핑하세요</div>
-      <div class="guest-wall-desc">
-        회원만 상품과 가격을 확인하고<br>구매할 수 있습니다.
-      </div>
-      <div class="guest-wall-benefits">
-        <div class="guest-benefit-item"><span>🛍️</span><span>전체 상품 목록 및 가격 확인</span></div>
-        <div class="guest-benefit-item"><span>🛒</span><span>장바구니 담기 및 바로구매</span></div>
-        <div class="guest-benefit-item"><span>📦</span><span>주문 내역 조회</span></div>
-        <div class="guest-benefit-item"><span>🎁</span><span>회원 전용 혜택 이용</span></div>
-      </div>
-      <div class="guest-wall-btns">
-        <a href="login.html" class="btn btn-primary btn-lg">🔑 로그인</a>
-        <a href="register.html" class="btn btn-outline btn-lg">✏️ 회원가입</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 로그인 후 상품 섹션 ===== -->
-<main class="page-content" id="productsSection" style="display:none;">
-  <div class="section">
-    <div class="section-header">
-      <h2 class="section-title">전체 상품</h2>
-      <span id="productCount" style="font-size:14px;color:var(--text-muted);"></span>
-    </div>
-
-    <!-- Search -->
-    <div class="search-bar">
-      <input type="text" class="search-input" id="searchInput" placeholder="상품명으로 검색..." oninput="onSearch()">
-    </div>
-
-    <!-- Category Filter -->
-    <div class="filter-chips" id="catFilter">
-      <button class="filter-chip active" data-cat="" onclick="setCategory(this,'')">전체</button>
-    </div>
-
-    <!-- Grid -->
-    <div class="products-grid" id="productsGrid">
-      <div class="no-products-msg">
-        <div class="spinner" style="margin:0 auto 20px;"></div>
-        <p>상품을 불러오는 중...</p>
-      </div>
-    </div>
-
-    <div class="pagination" id="pagination"></div>
-  </div>
-</main>
-
-<!-- Footer -->
-<footer class="footer">
-  <div class="footer-inner">
-    <div class="footer-brand">
-      <div class="logo" id="footerLogo">🛍️ My Shop</div>
-      <p id="footerDesc">편리하고 합리적인 쇼핑<br>고객 만족을 최우선으로!</p>
-    </div>
-    <div>
-      <div class="footer-title">바로가기</div>
-      <div class="footer-links">
-        <a href="index.html">홈</a>
-        <a href="cart.html">장바구니</a>
+  <header>
+    <div class="wrap topbar">
+      <div class="logo">🛍️ HAEIRIN</div>
+      <nav>
+        <a href="#products">상품</a>
+        <a href="#live">라이브 일정</a>
+        <a href="#guide">구매 안내</a>
         <a href="login.html">로그인</a>
         <a href="register.html">회원가입</a>
-      </div>
+      </nav>
     </div>
-    <div>
-      <div class="footer-title">쇼핑 안내</div>
-      <div class="footer-links" id="footerShopInfo">
-        <span>로딩 중...</span>
-      </div>
-    </div>
-    <div>
-      <div class="footer-title">계좌 정보</div>
-      <div class="footer-links" id="footerBankInfo">
-        <span>로딩 중...</span>
-      </div>
-    </div>
-  </div>
-  <div class="footer-bottom">
-    <span id="footerCopy">© My Shop</span> &nbsp;|&nbsp; 개인정보처리방침 &nbsp;|&nbsp; 이용약관
-  </div>
-</footer>
+  </header>
 
-<div class="toast-container"></div>
-
-<script src="js/utils.js"></script>
-<script>
-  let allProducts = [];
-  let filteredProducts = [];
-  let categories = [];
-  let currentCat = '';
-  let currentPage = 1;
-  const PER_PAGE = 12;
-
-  async function init() {
-    await renderHeader('home');
-    await loadSettings();
-
-    const user = Auth.getUser();
-
-    if (!user) {
-      /* ===== 비로그인: 잠금 화면 표시 ===== */
-      document.getElementById('guestWall').style.display = 'block';
-      document.getElementById('productsSection').style.display = 'none';
-
-      // 히어로 버튼 → 로그인/회원가입 유도
-      document.getElementById('heroBtns').innerHTML = `
-        <a href="login.html" class="hero-btn-white">🔑 로그인하고 쇼핑하기</a>
-        <a href="register.html" class="hero-btn-ghost">✏️ 회원가입</a>
-      `;
-    } else {
-      /* ===== 로그인: 상품 목록 표시 ===== */
-      document.getElementById('guestWall').style.display = 'none';
-      document.getElementById('productsSection').style.display = 'block';
-
-      // 히어로 버튼 → 쇼핑/장바구니
-      document.getElementById('heroBtns').innerHTML = `
-        <a href="#productsSection" class="hero-btn-white">쇼핑 시작하기 →</a>
-        <a href="cart.html" class="hero-btn-ghost">🛒 장바구니</a>
-      `;
-
-      await loadProducts();
-    }
-  }
-
-  async function loadSettings() {
-    try {
-      const s = await Settings.getAll();
-      const name = s.shop_name || 'My Shop';
-      const desc = s.shop_description || '트렌디한 패션을 합리적인 가격에 만나보세요';
-      const fee  = parseInt(s.shipping_fee_standard || 3000);
-      const free = parseInt(s.shipping_fee_free_threshold || 50000);
-
-      document.title = name + ' - 쇼핑몰';
-      document.getElementById('heroTitle').textContent   = '🛍️ ' + name;
-      document.getElementById('heroDesc').textContent    = desc;
-      document.getElementById('footerLogo').textContent  = '🛍️ ' + name;
-      document.getElementById('footerDesc').textContent  = desc;
-      document.getElementById('footerCopy').textContent  = '© ' + name;
-      document.getElementById('freeLabel').textContent   = free.toLocaleString() + '원 이상 무료배송';
-      document.getElementById('footerShopInfo').innerHTML =
-        `<span>배송비 ${fee.toLocaleString()}원</span><span>${free.toLocaleString()}원 이상 무료</span><span>결제확인 후 2~3일</span>`;
-      document.getElementById('footerBankInfo').innerHTML =
-        `<span>은행: ${s.bank_account_bank || '-'}</span>
-         <span>계좌: ${s.bank_account_number || '-'}</span>
-         <span>예금주: ${s.bank_account_holder || '-'}</span>`;
-    } catch(e) {}
-  }
-
-  async function loadProducts() {
-    try {
-      const res = await API.get('products', { limit: 500 });
-      allProducts = (res.data || []).filter(p => p.is_active !== false);
-      const catSet = new Set();
-      allProducts.forEach(p => { if (p.category) catSet.add(p.category); });
-      categories = [...catSet];
-      renderCatFilter();
-      applyFilter();
-    } catch(e) {
-      document.getElementById('productsGrid').innerHTML =
-        '<div class="no-products-msg"><div class="emoji">😕</div><p>상품을 불러오지 못했습니다.</p></div>';
-    }
-  }
-
-  function renderCatFilter() {
-    const c = document.getElementById('catFilter');
-    c.innerHTML = '<button class="filter-chip active" data-cat="" onclick="setCategory(this,\'\')">전체</button>';
-    categories.forEach(cat => {
-      c.innerHTML += `<button class="filter-chip" data-cat="${cat}" onclick="setCategory(this,'${cat}')">${cat}</button>`;
-    });
-  }
-
-  function setCategory(btn, cat) {
-    document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentCat = cat;
-    currentPage = 1;
-    applyFilter();
-  }
-
-  function onSearch() { currentPage = 1; applyFilter(); }
-
-  function applyFilter() {
-    const q = document.getElementById('searchInput').value.toLowerCase().trim();
-    filteredProducts = allProducts.filter(p => {
-      const mc = !currentCat || p.category === currentCat;
-      const mq = !q || p.name.toLowerCase().includes(q) || (p.description||'').toLowerCase().includes(q);
-      return mc && mq;
-    });
-    renderProducts();
-  }
-
-  function renderProducts() {
-    const total = filteredProducts.length;
-    const pages = Math.ceil(total / PER_PAGE);
-    const start = (currentPage - 1) * PER_PAGE;
-    const slice = filteredProducts.slice(start, start + PER_PAGE);
-
-    document.getElementById('productCount').textContent = '총 ' + total + '개 상품';
-
-    const grid = document.getElementById('productsGrid');
-    if (slice.length === 0) {
-      const isAdmin = typeof Auth !== 'undefined' && Auth.isAdmin();
-      grid.innerHTML = `<div class="no-products-msg">
-        <div class="emoji">${allProducts.length === 0 ? '🛍️' : '🔍'}</div>
-        <p style="font-weight:600;font-size:16px;">${allProducts.length === 0 ? '아직 등록된 상품이 없습니다' : '검색 결과가 없습니다.'}</p>
-        ${allProducts.length === 0 && isAdmin ? '<a href="admin.html" class="btn btn-primary" style="margin-top:16px;">➕ 상품 등록하러 가기</a>' : ''}
-        ${allProducts.length === 0 && !isAdmin ? '<p style="color:var(--text-muted);font-size:14px;margin-top:8px;">곧 새로운 상품이 추가될 예정입니다</p>' : ''}
-      </div>`;
-    } else {
-      grid.innerHTML = slice.map(p => renderCard(p)).join('');
-    }
-    renderPagination(pages);
-  }
-
-  function renderCard(p) {
-    const stock = parseInt(p.stock || 0);
-    const stockHtml = stock === 0
-      ? '<div class="product-stock out">품절</div>'
-      : stock <= 5
-        ? `<div class="product-stock low">⚡ 잔여 ${stock}개</div>`
-        : '';
-    return `
-      <a href="product.html?id=${p.id}" class="product-card ${stock===0?'out-of-stock':''}">
-        <div class="product-img">${productImageHtml(p.thumbnail, p.name)}</div>
-        <div class="product-info">
-          ${p.category ? `<div class="product-category">${p.category}</div>` : ''}
-          <div class="product-name">${p.name}</div>
-          <div class="product-price">${formatPrice(p.price)}</div>
-          ${stockHtml}
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <div class="hero-badge">해이린 라이브 셀렉샵</div>
+        <h1>예쁘고 실속 있게,<br>해이린이 직접 고른 상품</h1>
+        <p>
+          뷰티, 생활용품, 인기 셀렉 상품까지<br>
+          라이브에서 보던 느낌 그대로 편하게 만나보세요.
+        </p>
+        <div class="hero-btns">
+          <a class="btn btn-primary" href="#products">상품 보러가기</a>
+          <a class="btn btn-secondary" href="#live">라이브 일정 보기</a>
         </div>
-      </a>`;
-  }
+      </div>
+    </section>
 
-  function renderPagination(pages) {
-    const el = document.getElementById('pagination');
-    if (pages <= 1) { el.innerHTML = ''; return; }
-    let html = '';
-    if (currentPage > 1) html += `<button class="page-btn" onclick="goPage(${currentPage-1})">‹</button>`;
-    for (let i = 1; i <= pages; i++) {
-      if (i===1||i===pages||Math.abs(i-currentPage)<=2)
-        html += `<button class="page-btn${i===currentPage?' active':''}" onclick="goPage(${i})">${i}</button>`;
-      else if (Math.abs(i-currentPage)===3)
-        html += `<span style="padding:0 4px;line-height:36px;color:var(--text-muted)">…</span>`;
-    }
-    if (currentPage < pages) html += `<button class="page-btn" onclick="goPage(${currentPage+1})">›</button>`;
-    el.innerHTML = html;
-  }
+    <section class="benefits">
+      <div class="wrap">
+        <div class="benefit-grid">
+          <div class="benefit">
+            <div class="icon">🚚</div>
+            <strong>5만원 이상 무료배송</strong>
+            <span>합리적인 혜택으로 부담 없이 쇼핑</span>
+          </div>
+          <div class="benefit">
+            <div class="icon">🏦</div>
+            <strong>간편한 계좌이체</strong>
+            <span>복잡하지 않게 빠르게 주문 가능</span>
+          </div>
+          <div class="benefit">
+            <div class="icon">🔒</div>
+            <strong>안전한 거래</strong>
+            <span>주문부터 확인까지 편안하게</span>
+          </div>
+          <div class="benefit">
+            <div class="icon">📦</div>
+            <strong>빠른 배송 안내</strong>
+            <span>순차 발송으로 꼼꼼하게 진행</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-  function goPage(p) {
-    currentPage = p;
-    renderProducts();
-    window.scrollTo({ top: document.getElementById('productsSection').offsetTop - 72, behavior: 'smooth' });
-  }
+    <section class="section" id="products">
+      <div class="wrap">
+        <h2 class="section-title">추천 상품</h2>
+        <p class="section-desc">해이린 셀렉으로 많이 찾는 인기 상품들을 먼저 보여드려요.</p>
 
-  init();
-</script>
+        <div class="product-grid">
+          <article class="card">
+            <div class="card-img">✨</div>
+            <div class="card-body">
+              <div class="tag">인기상품</div>
+              <h3>뷰티 셀렉</h3>
+              <p>매일 쓰기 좋은 실속 뷰티 아이템을 담았어요.</p>
+              <div class="price">오픈 예정</div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-img">🧴</div>
+            <div class="card-body">
+              <div class="tag">추천구성</div>
+              <h3>생활/건강 셀렉</h3>
+              <p>가볍게 시작하기 좋은 데일리 아이템 모음.</p>
+              <div class="price">오픈 예정</div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-img">🎁</div>
+            <div class="card-body">
+              <div class="tag">이벤트</div>
+              <h3>라이브 특가 상품</h3>
+              <p>방송에서만 만날 수 있는 구성과 혜택을 준비했어요.</p>
+              <div class="price">라이브 공개</div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="live">
+      <div class="wrap">
+        <div class="live-box">
+          <div>
+            <h3>라이브 일정 안내</h3>
+            <p>
+              해이린 라이브에서 상품 설명부터 혜택까지 한 번에 확인하세요.<br>
+              방송 일정은 수시로 업데이트됩니다.
+            </p>
+            <a class="btn btn-secondary" href="login.html">로그인하고 확인하기</a>
+          </div>
+          <div class="live-info">
+            <strong>다음 라이브</strong>
+            <div>방송 일정 업데이트 예정</div>
+            <div style="margin-top:10px;">틱톡 / 오픈채널 / 공지 통해 안내</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="guide">
+      <div class="wrap">
+        <h2 class="section-title">구매 안내</h2>
+        <div class="notice">
+          <ul>
+            <li>상품 재고는 실시간 변동될 수 있습니다.</li>
+            <li>5만원 이상 구매 시 무료배송 혜택이 적용됩니다.</li>
+            <li>업체 발송 상품은 준비 기간이 조금 더 소요될 수 있습니다.</li>
+            <li>주문/배송 문의는 공지된 채널로 남겨주시면 순차 안내드립니다.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="footer-brand">🛍️ HAEIRIN</div>
+      <div>편리하고 합리적인 쇼핑, 고객 만족을 최우선으로.</div>
+      <div style="margin-top:10px;">© HAEIRIN · 개인정보처리방침 · 이용약관</div>
+    </div>
+  </footer>
 </body>
 </html>
