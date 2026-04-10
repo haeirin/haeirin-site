@@ -1,433 +1,100 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HAEIRIN</title>
+  <meta charset="UTF-8">
+  <title>해이린 쇼핑몰</title>
+
   <style>
-    * { box-sizing: border-box; }
     body {
+      font-family: 'Arial', sans-serif;
+      background: #f5f7fa;
       margin: 0;
-      font-family: Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-      background: #f7fcfb;
-      color: #164c4a;
-      line-height: 1.5;
     }
-    a { text-decoration: none; color: inherit; }
-    .wrap {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 16px;
-    }
+
     header {
-      background: #ffffff;
-      border-bottom: 1px solid #d9f1ed;
-      position: sticky;
-      top: 0;
-      z-index: 20;
-    }
-    .topbar {
+      background: #00c2a8;
+      color: white;
+      padding: 15px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      min-height: 72px;
-    }
-    .logo {
-      font-size: 30px;
-      font-weight: 800;
-      color: #16a39b;
-      display: flex;
       align-items: center;
-      gap: 10px;
     }
-    nav {
-      display: flex;
-      gap: 18px;
-      font-size: 16px;
-      font-weight: 700;
-      flex-wrap: wrap;
-    }
-    nav a {
-      color: #1d5e5a;
-    }
-    .hero {
-      padding: 56px 0 36px;
+
+    .container {
+      padding: 30px;
       text-align: center;
     }
-    .hero-badge {
-      display: inline-block;
-      background: #e8faf7;
-      color: #169a91;
-      border: 1px solid #bfece6;
-      border-radius: 999px;
-      padding: 8px 16px;
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: 18px;
-    }
-    .hero h1 {
-      margin: 0;
-      font-size: 44px;
-      color: #138f87;
-      line-height: 1.2;
-    }
-    .hero p {
-      margin: 16px auto 0;
-      max-width: 760px;
-      font-size: 20px;
-      color: #356d69;
-    }
-    .hero-btns {
-      margin-top: 28px;
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .btn {
-      display: inline-block;
-      padding: 14px 22px;
-      border-radius: 14px;
-      font-weight: 800;
-      font-size: 16px;
-    }
-    .btn-primary {
-      background: #16a39b;
-      color: #fff;
-    }
-    .btn-secondary {
-      background: #fff;
-      color: #138f87;
-      border: 1px solid #bfece6;
-    }
-    .benefits {
-      padding: 20px 0 14px;
-    }
-    .benefit-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-    }
-    .benefit {
-      background: #fff;
-      border: 1px solid #d9f1ed;
-      border-radius: 20px;
-      padding: 22px 18px;
-      text-align: center;
-      box-shadow: 0 8px 24px rgba(18, 126, 119, 0.06);
-    }
-    .benefit .icon {
-      font-size: 28px;
-      margin-bottom: 8px;
-    }
-    .benefit strong {
-      display: block;
-      font-size: 18px;
-      margin-bottom: 6px;
-      color: #174d4a;
-    }
-    .benefit span {
-      font-size: 14px;
-      color: #5f8682;
-    }
-    .section {
-      padding: 42px 0;
-    }
-    .section-title {
-      font-size: 30px;
-      margin: 0 0 10px;
-      color: #164c4a;
-    }
-    .section-desc {
-      margin: 0 0 24px;
-      color: #5b817d;
-      font-size: 16px;
-    }
-    .product-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 18px;
-    }
-    .card {
-      background: #fff;
-      border: 1px solid #d9f1ed;
-      border-radius: 22px;
-      overflow: hidden;
-      box-shadow: 0 8px 24px rgba(18, 126, 119, 0.06);
-    }
-    .card-img {
-      background: linear-gradient(135deg, #dff8f4, #f4fffd);
-      height: 210px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 54px;
-    }
-    .card-body {
-      padding: 18px;
-    }
-    .tag {
-      display: inline-block;
-      background: #e8faf7;
-      color: #15958c;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 12px;
-      font-weight: 800;
+
+    h1 {
       margin-bottom: 10px;
     }
-    .card h3 {
-      margin: 0 0 8px;
-      font-size: 21px;
-      color: #184f4b;
+
+    button {
+      padding: 10px 15px;
+      border: none;
+      background: #ff5c5c;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
     }
-    .card p {
-      margin: 0 0 14px;
-      color: #5e8480;
-      font-size: 15px;
-      min-height: 44px;
+
+    button:hover {
+      background: #e04b4b;
     }
-    .price {
-      font-size: 24px;
-      font-weight: 800;
-      color: #14a096;
-    }
-    .live-box {
-      background: linear-gradient(135deg, #16a39b, #54cfc4);
-      color: #fff;
-      border-radius: 26px;
-      padding: 28px;
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      gap: 20px;
-      align-items: center;
-    }
-    .live-box h3 {
-      margin: 0 0 10px;
-      font-size: 30px;
-    }
-    .live-box p {
-      margin: 0 0 16px;
-      font-size: 17px;
-      color: #effffd;
-    }
-    .live-info {
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.25);
-      border-radius: 18px;
-      padding: 18px;
-    }
-    .live-info strong {
-      display: block;
-      font-size: 24px;
-      margin-bottom: 6px;
-    }
-    .notice {
-      background: #fff;
-      border: 1px solid #d9f1ed;
-      border-radius: 22px;
-      padding: 22px;
-    }
-    .notice ul {
-      margin: 0;
-      padding-left: 18px;
-      color: #4d7571;
-    }
-    .notice li { margin-bottom: 10px; }
-    footer {
+
+    .product-box {
       margin-top: 30px;
-      background: #ffffff;
-      border-top: 1px solid #d9f1ed;
-      padding: 28px 0 50px;
-      color: #5d817e;
-      font-size: 14px;
-    }
-    .footer-brand {
-      font-size: 22px;
-      font-weight: 800;
-      color: #15958c;
-      margin-bottom: 10px;
-    }
-
-    @media (max-width: 900px) {
-      .benefit-grid,
-      .product-grid,
-      .live-box {
-        grid-template-columns: 1fr 1fr;
-      }
-      .live-box {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .topbar {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 14px 0;
-      }
-      .logo { font-size: 28px; }
-      .hero {
-        padding: 40px 0 24px;
-      }
-      .hero h1 {
-        font-size: 32px;
-      }
-      .hero p {
-        font-size: 17px;
-      }
-      .benefit-grid,
-      .product-grid {
-        grid-template-columns: 1fr;
-      }
-      .section-title {
-        font-size: 26px;
-      }
-      nav {
-        gap: 12px;
-        font-size: 15px;
-      }
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
     }
   </style>
 </head>
+
 <body>
-  <header>
-    <div class="wrap topbar">
-      <div class="logo">🛍️ HAEIRIN</div>
-      <nav>
-        <a href="#products">상품</a>
-        <a href="#live">라이브 일정</a>
-        <a href="#guide">구매 안내</a>
-        <a href="login.html">로그인</a>
-        <a href="register.html">회원가입</a>
-      </nav>
-    </div>
-  </header>
 
-  <main>
-    <section class="hero">
-      <div class="wrap">
-        <div class="hero-badge">해이린 라이브 셀렉샵</div>
-        <h1>예쁘고 실속 있게,<br>해이린이 직접 고른 상품</h1>
-        <p>
-          뷰티, 생활용품, 인기 셀렉 상품까지<br>
-          라이브에서 보던 느낌 그대로 편하게 만나보세요.
-        </p>
-        <div class="hero-btns">
-          <a class="btn btn-primary" href="#products">상품 보러가기</a>
-          <a class="btn btn-secondary" href="#live">라이브 일정 보기</a>
-        </div>
-      </div>
-    </section>
+<header>
+  <div>해이린 쇼핑몰</div>
+  <div>
+    <span id="userNickname"></span>
+    <button onclick="logout()">로그아웃</button>
+  </div>
+</header>
 
-    <section class="benefits">
-      <div class="wrap">
-        <div class="benefit-grid">
-          <div class="benefit">
-            <div class="icon">🚚</div>
-            <strong>5만원 이상 무료배송</strong>
-            <span>합리적인 혜택으로 부담 없이 쇼핑</span>
-          </div>
-          <div class="benefit">
-            <div class="icon">🏦</div>
-            <strong>간편한 계좌이체</strong>
-            <span>복잡하지 않게 빠르게 주문 가능</span>
-          </div>
-          <div class="benefit">
-            <div class="icon">🔒</div>
-            <strong>안전한 거래</strong>
-            <span>주문부터 확인까지 편안하게</span>
-          </div>
-          <div class="benefit">
-            <div class="icon">📦</div>
-            <strong>빠른 배송 안내</strong>
-            <span>순차 발송으로 꼼꼼하게 진행</span>
-          </div>
-        </div>
-      </div>
-    </section>
+<div class="container">
+  <h1>환영합니다 🎉</h1>
+  <p>로그인된 사용자만 볼 수 있는 페이지입니다.</p>
 
-    <section class="section" id="products">
-      <div class="wrap">
-        <h2 class="section-title">추천 상품</h2>
-        <p class="section-desc">해이린 셀렉으로 많이 찾는 인기 상품들을 먼저 보여드려요.</p>
+  <div class="product-box">
+    <h3>🔥 오늘의 추천 상품</h3>
+    <p>여기에 상품을 넣으면 진짜 쇼핑몰 시작됨</p>
+  </div>
+</div>
 
-        <div class="product-grid">
-          <article class="card">
-            <div class="card-img">✨</div>
-            <div class="card-body">
-              <div class="tag">인기상품</div>
-              <h3>뷰티 셀렉</h3>
-              <p>매일 쓰기 좋은 실속 뷰티 아이템을 담았어요.</p>
-              <div class="price">오픈 예정</div>
-            </div>
-          </article>
+<script>
+window.onload = function() {
+  const isLoggedIn = localStorage.getItem("isLoggedIn");
+  const user = JSON.parse(localStorage.getItem("user"));
 
-          <article class="card">
-            <div class="card-img">🧴</div>
-            <div class="card-body">
-              <div class="tag">추천구성</div>
-              <h3>생활/건강 셀렉</h3>
-              <p>가볍게 시작하기 좋은 데일리 아이템 모음.</p>
-              <div class="price">오픈 예정</div>
-            </div>
-          </article>
+  // 로그인 안 되어 있으면 차단
+  if (isLoggedIn !== "true" || !user) {
+    alert("로그인이 필요합니다.");
+    window.location.href = "login.html";
+    return;
+  }
 
-          <article class="card">
-            <div class="card-img">🎁</div>
-            <div class="card-body">
-              <div class="tag">이벤트</div>
-              <h3>라이브 특가 상품</h3>
-              <p>방송에서만 만날 수 있는 구성과 혜택을 준비했어요.</p>
-              <div class="price">라이브 공개</div>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
+  // 닉네임 표시
+  document.getElementById("userNickname").innerText = user.nickname + "님";
+};
 
-    <section class="section" id="live">
-      <div class="wrap">
-        <div class="live-box">
-          <div>
-            <h3>라이브 일정 안내</h3>
-            <p>
-              해이린 라이브에서 상품 설명부터 혜택까지 한 번에 확인하세요.<br>
-              방송 일정은 수시로 업데이트됩니다.
-            </p>
-            <a class="btn btn-secondary" href="login.html">로그인하고 확인하기</a>
-          </div>
-          <div class="live-info">
-            <strong>다음 라이브</strong>
-            <div>방송 일정 업데이트 예정</div>
-            <div style="margin-top:10px;">틱톡 / 오픈채널 / 공지 통해 안내</div>
-          </div>
-        </div>
-      </div>
-    </section>
+// 로그아웃
+function logout() {
+  localStorage.removeItem("isLoggedIn");
+  alert("로그아웃 되었습니다.");
+  window.location.href = "login.html";
+}
+</script>
 
-    <section class="section" id="guide">
-      <div class="wrap">
-        <h2 class="section-title">구매 안내</h2>
-        <div class="notice">
-          <ul>
-            <li>상품 재고는 실시간 변동될 수 있습니다.</li>
-            <li>5만원 이상 구매 시 무료배송 혜택이 적용됩니다.</li>
-            <li>업체 발송 상품은 준비 기간이 조금 더 소요될 수 있습니다.</li>
-            <li>주문/배송 문의는 공지된 채널로 남겨주시면 순차 안내드립니다.</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <div class="wrap">
-      <div class="footer-brand">🛍️ HAEIRIN</div>
-      <div>편리하고 합리적인 쇼핑, 고객 만족을 최우선으로.</div>
-      <div style="margin-top:10px;">© HAEIRIN · 개인정보처리방침 · 이용약관</div>
-    </div>
-  </footer>
 </body>
 </html>
