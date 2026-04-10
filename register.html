@@ -110,16 +110,16 @@
   <form onsubmit="return validateForm()">
 
     <label>닉네임</label>
-    <input type="text" required>
+    <input id="nickname" type="text" required>
 
     <label>이름</label>
-    <input type="text" required>
+    <input id="name" type="text" required>
 
     <label>이메일</label>
-    <input type="email" required>
+    <input id="email" type="email" required>
 
     <label>전화번호</label>
-    <input type="tel" required>
+    <input id="phone" type="tel" required>
 
     <label>비밀번호</label>
     <input type="password" id="password" placeholder="숫자 6자리 이상" required>
@@ -134,22 +134,20 @@
     </div>
 
     <input type="text" id="address" placeholder="도로명 주소" readonly>
-    <input type="text" placeholder="상세 주소 입력">
+    <input type="text" id="detailAddress" placeholder="상세 주소 입력">
 
-    <!-- 개인정보 동의 -->
     <label>개인정보 수집 및 이용 동의</label>
 
     <div class="agree-box">
-      본 서비스는 회원가입을 위해 아래와 같은 개인정보를 수집합니다.<br><br>
-      - 수집항목: 이름, 닉네임, 이메일, 전화번호, 주소<br>
-      - 이용목적: 상품 배송 및 고객 응대<br>
-      - 보관기간: 회원 탈퇴 시까지<br><br>
-      ※ 동의를 거부할 수 있으나, 거부 시 회원가입이 제한됩니다.
+      수집항목: 이름, 닉네임, 이메일, 전화번호, 주소<br>
+      이용목적: 상품 배송 및 고객 응대<br>
+      보관기간: 회원 탈퇴 시까지<br><br>
+      ※ 동의하지 않으면 가입 불가
     </div>
 
     <div class="checkbox-area">
       <input type="checkbox" id="agree">
-      <label for="agree">위 내용을 확인하였으며 동의합니다 (필수)</label>
+      <label for="agree">동의합니다 (필수)</label>
     </div>
     <div id="agreeError" class="error"></div>
 
@@ -169,7 +167,13 @@ function execDaumPostcode() {
 }
 
 function validateForm() {
-  const pw = document.getElementById("password").value;
+  const nickname = document.getElementById("nickname").value;
+  const name = document.getElementById("name").value;
+  const email = document.getElementById("email").value;
+  const phone = document.getElementById("phone").value;
+  const password = document.getElementById("password").value;
+  const address = document.getElementById("address").value;
+  const detailAddress = document.getElementById("detailAddress").value;
   const agree = document.getElementById("agree").checked;
 
   const pwError = document.getElementById("pwError");
@@ -177,29 +181,41 @@ function validateForm() {
 
   const isNumber = /^[0-9]+$/;
 
-  // 비밀번호 체크
-  if (!isNumber.test(pw)) {
+  if (!isNumber.test(password)) {
     pwError.innerText = "비밀번호는 숫자만 입력해주세요.";
     return false;
   }
 
-  if (pw.length < 6) {
+  if (password.length < 6) {
     pwError.innerText = "비밀번호는 6자리 이상 입력해주세요.";
     return false;
   }
 
   pwError.innerText = "";
 
-  // 동의 체크
   if (!agree) {
-    agreeError.innerText = "개인정보 수집 및 이용에 동의해주세요.";
+    agreeError.innerText = "개인정보 동의는 필수입니다.";
     return false;
   }
 
   agreeError.innerText = "";
 
+  const user = {
+    nickname,
+    name,
+    email,
+    phone,
+    password,
+    address,
+    detailAddress
+  };
+
+  localStorage.setItem("user", JSON.stringify(user));
+
   alert("회원가입 완료!");
-  return true;
+  window.location.href = "login.html";
+
+  return false;
 }
 </script>
 
